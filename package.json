@@ -13,10 +13,20 @@
   "keywords": [
     "test"
   ],
-  "author": "ACJ",
+  "author": {
+    "name": "ACJ",
+    "url": "https://alexanderchristiaanjacob.com/"
+  },
   "license": "UNLICENSED",
+  "private": true,
   "bugs": {
     "url": "https://github.com/deidee/dezandbak/issues"
   },
-  "homepage": "https://github.com/deidee/dezandbak#readme"
+  "homepage": "https://github.com/deidee/dezandbak#readme",
+  "dependencies": {
+    "gulp": "^4.0.0",
+    "gulp-sass": "^4.0.2",
+    "gulp-uglify": "^3.0.2",
+    "readable-stream": "^3.3.0"
+  }
 }
