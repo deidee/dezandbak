@@ -1,0 +1,40 @@
+<!doctype html>
+<html dir="ltr" lang="nl">
+<head>
+    <meta charset="utf-8">
+    <title>Schermreflectie</title>
+    <style>
+
+        * {
+            border: 0;
+            margin: 0;
+            outline: 0;
+            padding: 0;
+        }
+
+        html {
+            background: lime;
+        }
+
+        .reflectie {
+            background:
+                    linear-gradient(60deg,
+                    rgba(0,0,0,0) 0%,
+                    rgba(255,255,255,0) 50%,
+                    rgba(255,255,255,.75) 50%,
+                    rgba(255,255,255,.5) 100%);
+            bottom: 0;
+            left: 0;
+            pointer-events: none;
+            position: fixed;
+            right: 0;
+            top: 0;
+        }
+
+    </style>
+</head>
+<body>
+<p>Hoi.</p>
+<div class="reflectie"></div>
+</body>
+</html>
