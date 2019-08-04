@@ -9,6 +9,10 @@ $colors: (
 );
 
 @each $i, $color in $colors {
+  .bg-#{$i} {
+    background-color: $color;
+  }
+
   .text-#{$i} {
     color: $color;
   }

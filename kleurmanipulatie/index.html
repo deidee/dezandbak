@@ -1,12 +1,43 @@
 <!DOCTYPE html>
-<html dir="ltr" lang="nl">
+<html class="bg-4" dir="ltr" lang="nl">
 <head>
     <meta charset="utf-8">
     <meta name="robots" content="none">
     <title>Kleurmanipulatie</title>
     <link rel="stylesheet" href="kleurmanipulatie.css">
+    <style>
+        * {
+            border: 0;
+            box-sizing: border-box;
+            margin: 0;
+            outline: 0;
+            padding: 0;
+        }
+
+        .body {
+            margin: auto;
+            max-width: 800px;
+            min-height: 500px;
+            padding: 16px;
+        }
+
+        .content {
+            background-color: white;
+            display: flex;
+            padding: 16px;
+        }
+    </style>
 </head>
 <body>
-
+<div class="body bg-2">
+    <div class="content">
+        <div class="article">
+            <h2 class="text-3">Dit is een kop</h2>
+        </div>
+        <div class="aside">
+            <h2 class="text-3">Bijzaak</h2>
+        </div>
+    </div>
+</div>
 </body>
 </html>
