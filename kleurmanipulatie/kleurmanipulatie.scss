@@ -8,12 +8,19 @@ $colors: (
         6: #995f95
 );
 
+$new_color: #2269ca;
+
 @each $i, $color in $colors {
+  $old_hue: hue($color);
+  $new_hue: hue($new_color);
+  $hue_difference: $new_hue - $old_hue;
+  $adjusted_color: adjust_hue($color, $hue_difference);
+
   .bg-#{$i} {
-    background-color: $color;
+    background-color: $adjusted_color;
   }
 
   .text-#{$i} {
-    color: $color;
+    color: $adjusted_color;
   }
 }
