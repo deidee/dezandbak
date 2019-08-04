@@ -1,0 +1,15 @@
+
+$colors: (
+        1: #e7d1e4,
+        2: #deb6da,
+        3: #a169b4,
+        4: #d3c3d9,
+        5: #c495bf,
+        6: #995f95
+);
+
+@each $i, $color in $colors {
+  .text-#{$i} {
+    color: $color;
+  }
+}
