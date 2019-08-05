@@ -1,20 +1,27 @@
 
 $colors: (
-        1: #e7d1e4,
-        2: #deb6da,
         3: #a169b4,
-        4: #d3c3d9,
+        2: #deb6da,
+        1: #e7d1e4,
+        6: #995f95,
         5: #c495bf,
-        6: #995f95
+        4: #d3c3d9,
 );
+
+$base: #a169b4;
+
+$base_h: hue($base);
+$base_s: saturation($base);
+$base_l: lightness($base);
 
 $new_color: #2269ca;
 
 @each $i, $color in $colors {
-  $old_hue: hue($color);
-  $new_hue: hue($new_color);
-  $hue_difference: $new_hue - $old_hue;
-  $adjusted_color: adjust_hue($color, $hue_difference);
+  $diff_h: hue($color) - $base_h;
+  $diff_s: saturation($color) - $base_s;
+  $diff_l: lightness($color) - $base_l;
+
+  $adjusted_color: scale_color($new_color, false, false, false, $diff_h, $diff_s, $diff_l);
 
   .bg-#{$i} {
     background-color: $adjusted_color;
