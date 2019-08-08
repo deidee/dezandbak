@@ -1,5 +1,11 @@
 {
   "name": "deidee/dezandbak",
+  "repositories": [
+    {
+      "type": "vcs",
+      "url": "https://github.com/deidee/dezandbak"
+    }
+  ],
   "require": {
     "scssphp/scssphp": "^1.0"
   }
