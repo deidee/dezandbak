@@ -6,5 +6,6 @@ use ScssPhp\ScssPhp\Compiler;
 
 $scss = new Compiler();
 
-var_dump($scss);
+$code = file_get_contents('../kleurmanipulatie.scss');
 
+echo $scss->compile($code);
