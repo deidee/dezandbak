@@ -19,12 +19,14 @@
             max-width: 200px;
             position: relative;
             transform: translate(var(--x), var(--y));
+            will-change: transform;
         }
     </style>
 </head>
 <body>
 <div class="block">
     <div id="x">x</div>
+    <div id="y">y</div>
 </div>
 <script src="gyronorm.complete.min.js"></script>
 <script>
@@ -36,7 +38,7 @@
         orientationBase:GyroNorm.GAME,		// ( Can be GyroNorm.GAME or GyroNorm.WORLD. gn.GAME returns orientation values with respect to the head direction of the device. gn.WORLD returns the orientation values with respect to the actual north direction of the world. )
         decimalCount:1,					// ( How many digits after the decimal point will there be in the return values )
         logger:null,					// ( Function to be called to log messages from gyronorm.js )
-        screenAdjusted:false			// ( If set to true it will return screen adjusted values. )
+        screenAdjusted:true			// ( If set to true it will return screen adjusted values. )
     };
 
     var gn = new GyroNorm();
@@ -44,6 +46,8 @@
     var root = document.documentElement;
     var x = document.getElementById('x');
     x.innerText = 'test';
+    var y = document.getElementById('y');
+    y.innerText = 'test';
 
     gn.init(args).then(function(){
         gn.start(function(data){
@@ -63,10 +67,11 @@
             // data.dm.gy		( devicemotion event accelerationIncludingGravity y value )
             // data.dm.gz		( devicemotion event accelerationIncludingGravity z value )
 
-            root.style.setProperty('--x', data.dm.gx * 10 + "px");
-            root.style.setProperty('--y', data.dm.gy * 10 + "px");
+            root.style.setProperty('--x', data.do.gamma * -1 + "px");
+            root.style.setProperty('--y', data.do.beta * -1 + "px");
 
-            x.innerText = data.dm.x;
+            x.innerText = data.do.gamma;
+            y.innerText = data.do.beta;
 
             // data.dm.alpha	( devicemotion event rotationRate alpha value )
             // data.dm.beta		( devicemotion event rotationRate beta value )
