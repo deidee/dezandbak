@@ -6,8 +6,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Title</title>
     <link rel="stylesheet" href="https://default.style/">
+    <style>
+        :root {
+            --x: 0;
+            --y: 0;
+        }
+
+        .block {
+            background: lime;
+            height: 200px;
+            margin: auto;
+            max-width: 200px;
+            transform: translate3d(var(--x), var(--y), 0);
+        }
+    </style>
 </head>
 <body>
+<div class="block"></div>
 <script src="../node_modules/gyronorm/dist/gyronorm.complete.min.js"></script>
 <script>
     "use strict";
@@ -22,6 +37,8 @@
     };
 
     var gn = new GyroNorm();
+
+    let root = document.documentElement;
 
     gn.init(args).then(function(){
         gn.start(function(data){
@@ -38,6 +55,9 @@
             // data.dm.gx		( devicemotion event accelerationIncludingGravity x value )
             // data.dm.gy		( devicemotion event accelerationIncludingGravity y value )
             // data.dm.gz		( devicemotion event accelerationIncludingGravity z value )
+
+            root.style.setProperty('--x', data.dm.gx + "px");
+            root.style.setProperty('--y', data.dm.gy + "px");
 
             // data.dm.alpha	( devicemotion event rotationRate alpha value )
             // data.dm.beta		( devicemotion event rotationRate beta value )
