@@ -30,6 +30,7 @@
     "gulp-less": "^4.0.1",
     "gulp-sass": "^4.0.2",
     "gulp-uglify": "^3.0.2",
+    "gyronorm": "^2.0.6",
     "readable-stream": "^3.3.0",
     "sass-color-calculator": "^0.1.4"
   }
