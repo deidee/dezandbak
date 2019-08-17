@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="robots" content="none">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Title</title>
+    <title>Bewegingsdetector</title>
     <link rel="stylesheet" href="https://default.style/">
     <style>
         :root {
@@ -17,13 +17,16 @@
             height: 200px;
             margin: auto;
             max-width: 200px;
-            transform: translate3d(var(--x), var(--y), 0);
+            position: relative;
+            transform: translate(var(--x), var(--y));
         }
     </style>
 </head>
 <body>
-<div class="block"></div>
-<script src="../node_modules/gyronorm/dist/gyronorm.complete.min.js"></script>
+<div class="block">
+    <div id="x">x</div>
+</div>
+<script src="gyronorm.complete.min.js"></script>
 <script>
     "use strict";
 
@@ -31,17 +34,21 @@
         frequency:50,					// ( How often the object sends the values - milliseconds )
         gravityNormalized:true,			// ( If the gravity related values to be normalized )
         orientationBase:GyroNorm.GAME,		// ( Can be GyroNorm.GAME or GyroNorm.WORLD. gn.GAME returns orientation values with respect to the head direction of the device. gn.WORLD returns the orientation values with respect to the actual north direction of the world. )
-        decimalCount:2,					// ( How many digits after the decimal point will there be in the return values )
+        decimalCount:1,					// ( How many digits after the decimal point will there be in the return values )
         logger:null,					// ( Function to be called to log messages from gyronorm.js )
         screenAdjusted:false			// ( If set to true it will return screen adjusted values. )
     };
 
     var gn = new GyroNorm();
 
-    let root = document.documentElement;
+    var root = document.documentElement;
+    var x = document.getElementById('x');
+    x.innerText = 'test';
 
     gn.init(args).then(function(){
         gn.start(function(data){
+            gn.setHeadDirection();
+
             // Process:
             // data.do.alpha	( deviceorientation event alpha value )
             // data.do.beta		( deviceorientation event beta value )
@@ -56,8 +63,10 @@
             // data.dm.gy		( devicemotion event accelerationIncludingGravity y value )
             // data.dm.gz		( devicemotion event accelerationIncludingGravity z value )
 
-            root.style.setProperty('--x', data.dm.gx + "px");
-            root.style.setProperty('--y', data.dm.gy + "px");
+            root.style.setProperty('--x', data.dm.gx * 10 + "px");
+            root.style.setProperty('--y', data.dm.gy * 10 + "px");
+
+            x.innerText = data.dm.x;
 
             // data.dm.alpha	( devicemotion event rotationRate alpha value )
             // data.dm.beta		( devicemotion event rotationRate beta value )
