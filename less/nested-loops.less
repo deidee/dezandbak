@@ -1,5 +1,7 @@
 
 @selectors: 0, 8, 10, 16, 20;
+@columns: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12;
+@gutter-width: 30px;
 
 // Note: can only use this since Less v3.7.0.
 /*each(@selectors, {
@@ -27,4 +29,18 @@
     padding-bottom: (@value * 1px);
   }
 });
+
+.col {
+  padding-left: @gutter-width / 2;
+  padding-right: @gutter-width / 2;
+  position: relative;
+  width: 100%;
+}
+
+.for(@columns, {
+  .col-@{value} {
+    flex: 0 0 percentage(1 / 12 * @value);
+  }
+});
+
 
