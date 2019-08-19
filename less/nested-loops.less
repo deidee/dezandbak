@@ -1,8 +1,8 @@
 
-@selectors: blue, green, red;
+@selectors: 0, 8, 10, 16, 20;
 
 each(@selectors, {
 .sel-@{value} {
-  a: b;
+  a: @value;
 }
 });
