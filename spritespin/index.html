@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SpriteSpin</title>
+    <style>
+
+    </style>
+</head>
+<body>
+<div id="sprites"></div>
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+<script src="https://unpkg.com/spritespin@4.0.11/release/spritespin.js" type="text/javascript"></script>
+<script>
+    "use strict";
+
+    $(function() {
+        $('#sprites').spritespin({
+            // generate an array of image urls.
+            // this is a helper function that takes a {frame} placeholder
+            source: SpriteSpin.sourceArray('images/CarQon_R_360_V1-{frame}.png', {
+                // this ramge of numbers is interpolated into the {frame} placeholder
+                frame: [48,71],
+                // the frame placeholder will be padded with leading '0' up to the number of 'digits'
+                digits: 5
+            }),
+            width: 960,
+            height: 540,
+            sizeMode: 'fit',
+            // reverse interaction direction
+            sense: -1,
+            animate: false,
+            detectSubsampling: false,
+        });
+    });
+
+</script>
+</body>
+</html>
