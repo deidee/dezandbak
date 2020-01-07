@@ -1,0 +1,174 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Lay-outgrid</title>
+<style>
+    * {
+        border: 0;
+        margin: 0;
+        padding: 0;
+        position: relative;
+    }
+
+    a {
+        color: white;
+    }
+
+    body {
+        display: grid;
+        grid-template-areas:
+                "header header  header"
+                "nav    action  index";
+        grid-template-columns: 12rem 36rem 1fr;
+        grid-template-rows: 1.5rem 1fr;
+    }
+
+    header {
+        background: black;
+        color: white;
+        grid-area: header;
+        position: sticky;
+    }
+
+    html {
+        background: silver;
+        font: normal 100%/1.5 Calibri, sans-serif, serif;
+    }
+
+    nav {
+        background: blue;
+        grid-area: nav;
+    }
+
+    nav ul {
+        position: sticky;
+        top: 0;
+    }
+
+    section {
+        background: yellow;
+        grid-area: action;
+    }
+
+    section + section {
+        background: orange;
+        grid-area: index;
+    }
+
+    form, table {
+        bottom: 0;
+        position: sticky;
+        top: 0;
+    }
+</style>
+<header>Dit is de header</header>
+<nav>
+    <h2>Menu</h2>
+    <ul>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+        <li><a href="#">Item 1</a></li>
+    </ul>
+</nav>
+<section>
+    <h2>Formulier</h2>
+    <form action="#">
+        <div>Hier gebeuren dingen.</div>
+        <div>
+            <button type="submit">Knop</button>
+        </div>
+    </form>
+</section>
+<section>
+    <h2>Tabel</h2>
+    <table>
+        <tbody>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        <tr><td>1</td><td>Titel van een ding.</td><td>acties</td></tr>
+        </tbody>
+    </table>
+</section>
