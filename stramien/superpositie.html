@@ -1,0 +1,48 @@
+<!doctype html>
+<html dir="ltr" lang="nl">
+<head>
+    <meta charset="utf-8">
+    <title>Superpositie</title>
+    <style>
+
+        * {
+            border: 0;
+            margin: 0;
+            outline: 0;
+            padding: 0;
+        }
+
+        .grid {
+            display: grid;
+            grid-auto-rows: minmax(100px, auto);
+            grid-gap: 12px;
+            grid-template-columns: 100px 1fr repeat(12, 84px) 1fr 100px;
+        }
+
+        .grid > * {
+            outline: 1px solid lime;
+        }
+
+    </style>
+</head>
+<body>
+<div class="grid">
+    <div class="col"></div>
+    <div class="col"></div>
+    <div class="col"></div>
+    <div class="col"></div>
+    <div class="col"></div>
+    <div class="col"></div>
+    <div class="col"></div>
+    <div class="col"></div>
+    <div class="col"></div>
+    <div class="col"></div>
+    <div class="col"></div>
+    <div class="col"></div>
+    <div class="col"></div>
+    <div class="col"></div>
+    <div class="col"></div>
+    <div class="col"></div>
+</div>
+</body>
+</html>
