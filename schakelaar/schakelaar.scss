@@ -1,0 +1,67 @@
+
+%knob {
+  background: #fff;
+  border-radius: 50%;
+  content: '';
+  display: inline-block;
+  height: 1rem;
+  position: absolute;
+  top: 4px;
+  width: 1rem;
+}
+
+%icon {
+  color: #fff;
+  display: inline-block;
+  position: absolute;
+}
+
+%switch {
+  border-radius: .75rem;
+  box-sizing: border-box;
+  display: inline-block;
+  height: 1.5rem;
+  position: relative;
+  vertical-align: middle;
+  width: 40px;
+
+  &-on {
+    @extend %switch !optional;
+    background: lime;
+
+    &::after {
+      @extend %knob;
+      left: 4px;
+    }
+
+    &::before {
+      @extend %icon;
+      content: 'v';
+      right: 4px;
+    }
+  }
+
+  &-off {
+    @extend %switch !optional;
+    background: red;
+
+    &::after {
+      @extend %icon;
+      content: 'x';
+      left: 4px;
+    }
+
+    &::before {
+      @extend %knob;
+      right: 4px;
+    }
+  }
+}
+
+.switch-on {
+  @extend %switch-on !optional;
+}
+
+.switch-off {
+  @extend %switch-off !optional;
+}
