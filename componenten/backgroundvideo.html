@@ -23,42 +23,20 @@
             resize: both;
             width: 300px;
             overflow: hidden;
-        }
-
-        .embed-responsive {
-            background: red;
-            object-fit: cover;
             position: relative;
-            display: block;
-            min-width: 100%;
-            min-height: 100%;
-            padding: 0;
-            overflow: hidden;
         }
 
-        .embed-responsive::before {
-            display: block;
-            content: "";
-            padding-top: 56.25%;
-        }
-
-        .embed-responsive-item {
-            background: blue;
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            left: 0;
-            width: 100%;
+        video {
+            object-fit: cover;
             height: 100%;
-            border: 0;
+            width: 100%;
         }
+
     </style>
 </head>
 <body>
 <div class="cover">
-    <div class="embed-responsive">
-        <video class="embed-responsive-item" src="Carqon_Homepage_169.mp4"></video>
-    </div>
+    <video src="Carqon_Homepage_169.mp4"></video>
 </div>
 </body>
 </html>
