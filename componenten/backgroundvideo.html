@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title></title>
+    <style>
+        * {
+            border: 0;
+            box-sizing: border-box;
+            margin: 0;
+            outline: 0;
+            padding: 0;
+        }
+
+        html {
+            font: normal 100%/1.5 sans-serif, serif;
+        }
+
+        .cover {
+            background: green;
+            outline: 1px solid green;
+            height: 300px;
+            resize: both;
+            width: 300px;
+            overflow: hidden;
+        }
+
+        .embed-responsive {
+            background: red;
+            object-fit: cover;
+            position: relative;
+            display: block;
+            min-width: 100%;
+            min-height: 100%;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .embed-responsive::before {
+            display: block;
+            content: "";
+            padding-top: 56.25%;
+        }
+
+        .embed-responsive-item {
+            background: blue;
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+    </style>
+</head>
+<body>
+<div class="cover">
+    <div class="embed-responsive">
+        <video class="embed-responsive-item" src="Carqon_Homepage_169.mp4"></video>
+    </div>
+</div>
+</body>
+</html>
