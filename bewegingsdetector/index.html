@@ -27,6 +27,7 @@
 <div class="block">
     <div id="x">x</div>
     <div id="y">y</div>
+    <div id="z">z</div>
 </div>
 <script src="gyronorm.complete.min.js"></script>
 <script>
@@ -36,7 +37,7 @@
         frequency:50,					// ( How often the object sends the values - milliseconds )
         gravityNormalized:true,			// ( If the gravity related values to be normalized )
         orientationBase:GyroNorm.GAME,		// ( Can be GyroNorm.GAME or GyroNorm.WORLD. gn.GAME returns orientation values with respect to the head direction of the device. gn.WORLD returns the orientation values with respect to the actual north direction of the world. )
-        decimalCount:1,					// ( How many digits after the decimal point will there be in the return values )
+        decimalCount:2,					// ( How many digits after the decimal point will there be in the return values )
         logger:null,					// ( Function to be called to log messages from gyronorm.js )
         screenAdjusted:true			// ( If set to true it will return screen adjusted values. )
     };
@@ -48,6 +49,8 @@
     x.innerText = 'test';
     var y = document.getElementById('y');
     y.innerText = 'test';
+    var z = document.getElementById('z');
+    z.innerText = 'test';
 
     gn.init(args).then(function(){
         gn.start(function(data){
@@ -72,6 +75,7 @@
 
             x.innerText = data.do.gamma;
             y.innerText = data.do.beta;
+            z.innerText = data.do.alpha;
 
             // data.dm.alpha	( devicemotion event rotationRate alpha value )
             // data.dm.beta		( devicemotion event rotationRate beta value )
