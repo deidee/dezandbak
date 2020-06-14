@@ -13,9 +13,10 @@
 
         html {
             --x: 0;
+            --y: 0;
 
             background: url('https://koninklijkekunst.nl/p5.gif') white repeat;
-            background-position: calc(50% + -24px * var(--x)) calc(100% + -24px * var(--y));
+            background-position: calc(50% + -12px * var(--x)) calc(100% + -12px * var(--y));
             /*transition: background-position .25s linear;*/
         }
     </style>
@@ -31,7 +32,7 @@
 
     document.onmousemove = function(e) {
         let x = (e.clientX / width) * 2 - 1;
-        let y = (e.clientY / height) * 2 - 1;
+        let y = (e.clientY / height);
 
         //console.log(x, y);
 
