@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="nl">
+<head>
+    <meta charset="utf-8">
+    <title>Muispositie</title>
+    <style>
+        * {
+            border: 0;
+            margin: 0;
+            outline: 0;
+            padding: 0;
+        }
+
+        html {
+            --x: 0;
+
+            background: url('https://koninklijkekunst.nl/p5.gif') white repeat;
+            background-position: calc(50% + -24px * var(--x)) calc(100% + -24px * var(--y));
+            /*transition: background-position .25s linear;*/
+        }
+    </style>
+</head>
+<body>
+
+<script>
+    "use strict";
+
+    let root = document.documentElement;
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+
+    document.onmousemove = function(e) {
+        let x = (e.clientX / width) * 2 - 1;
+        let y = (e.clientY / height) * 2 - 1;
+
+        //console.log(x, y);
+
+        root.style.setProperty("--x", x);
+        root.style.setProperty("--y", y);
+    };
+</script>
+</body>
+</html>
