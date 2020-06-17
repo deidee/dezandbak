@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="nl">
+<head>
+    <meta charset="utf-8">
+    <title>Muispositie</title>
+    <style>
+        * {
+            border: 0;
+            margin: 0;
+            outline: 0;
+            padding: 0;
+        }
+
+        :root {
+            --x: 0;
+            --y: 0;
+            --blur: 0;
+            --alpha: 0;
+        }
+
+        body {
+            font-size: 2em;
+            padding: 3rem;
+            text-shadow: calc(var(--x) * -1em) calc(var(--y) * -1em) calc(var(--blur) * .5em) rgba(0, 0, 0, var(--alpha));
+        }
+
+        html {
+            background: lightcoral;
+            color: white;
+            font: normal 100%/1.5 serif, sans-serif;
+        }
+    </style>
+</head>
+<body>
+<p>Lighthousefish saw shark lake trout longnose sucker Old World rivuline armorhead catfish European perch, "beachsalmon Asiatic glassfish." Houndshark x-ray tetra glassfish rock cod African lungfish porcupinefish, medaka triggerfish hog sucker horsefish shortnose chimaera. Ladyfish tubeblenny pompano sheepshead; ghost flathead Pacific viperfish: tiger barb Celebes rainbowfish silver hake, longneck eel gray eel-catfish Long-finned sand diver. Halosaur dab pejerrey whale shark: gopher rockfish grunt mora fangtooth pearleye northern lampfish weeverfish longnose lancetfish.
+<p>Central mudminnow marlin California smoothtongue spikefish northern clingfish goatfish boafish sixgill ray; freshwater hatchetfish scabbard fish. Ziege kanyu threadfin giant wels tonguefish catfish fangtooth. Tench squirrelfish crocodile shark, bluefish knifejaw ghost fish Dolly Varden trout. Upside-down catfish smoothtongue bangus marblefish slimehead grayling Australian grayling Siamese fighting fish duckbill eel. Pineconefish elver stonecat dojo loach, African glass catfish Sacramento splittail. Baikal oilfish redtooth triggerfish orange roughy lanternfish.
+<p>Gopher rockfish creek chub morid cod, gudgeon cichlid Raccoon butterfly fish trumpeter flathead yellow-eye mullet sea chub hamlet killifish drum inanga, "clown triggerfish." Rockfish carpetshark clownfish, Hammerjaw New Zealand sand diver combfish goldfish cherry salmon catfish, ground shark Blind goby sculpin: Old World knifefish loach goby mudminnow.
+<p>New World rivuline carpsucker; gombessa catfish masu salmon tang southern Dolly Varden collared carpetshark. Yellowmargin triggerfish ronquil orangestriped triggerfish paradise fish herring smelt eucla cod cisco southern Dolly Varden yellowtail amberjack inanga. Redfish, seahorse flounder scorpionfish lined sole boga sharksucker remora striped burrfish pirarucu zander eel-goby harelip sucker gar pelican gulper rockweed gunnel Sacramento splittail!
+<p>Black bass gianttail pearl perch tiger shark Black triggerfish slickhead lampfish milkfish inanga seatrout sleeper northern clingfish. Zebra lionfish long-finned pike, canary rockfish orbicular batfish crappie chubsucker yellowtail horse mackerel mola Atlantic herring cavefish channel catfish. Yellowtail yellowtail garden eel South American Lungfish capelin silverside graveldiver redlip blenny Rattail skipjack tuna tarwhine trumpeter halfmoon Blacksmelt electric eel. Ghost knifefish drum barreleye shortnose sucker bandfish pejerrey streamer fish--silver dollar Ganges shark. Queen triggerfish grunt sculpin, Atlantic cod stingfish prickly shark threadsail bamboo shark banded killifish largenose fish barracudina emperor bream. Blue gourami ziege wels catfish squirrelfish killifish Manta Ray: glass catfish. African glass catfish moray eel Atlantic silverside common carp Blacksmelt, bigeye, bluegill blue whiting hardhead catfish whiting sailfish flying characin peladillo eeltail catfish; hairtail. Velvet-belly shark sea lamprey seahorse shortnose greeneye grouper spiny basslet herring European perch ocean perch. Manta Ray yellowfin croaker Sevan trout rough scad Alaska blackfish. Louvar oilfish bluntnose knifefish, tetra oilfish. Pacific lamprey flathead catfish john dory razorfish, flagfish, bonytail chub blacktip reef shark.</p>
+<script>
+    "use strict";
+
+    let root = document.documentElement;
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+    let x;
+    let y;
+    let blur;
+    let alpha;
+
+    document.onmousemove = function(e) {
+        x = (e.clientX / width) * 2 - 1;
+        y = (e.clientY / height);
+        blur = Math.abs(x) + y;
+        alpha = 1 - (Math.abs(x) + y) / 2;
+
+        root.style.setProperty("--x", x);
+        root.style.setProperty("--y", y);
+        root.style.setProperty("--blur", blur);
+        root.style.setProperty("--alpha", alpha);
+    };
+</script>
+</body>
+</html>
