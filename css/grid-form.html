@@ -1,0 +1,38 @@
+<!doctype html>
+<html dir="ltr" lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Grid Form</title>
+    <style>
+
+        * {
+            border: 0;
+            margin: 0;
+            outline: 0;
+            padding: 0;
+        }
+
+        form {
+            background: #ddd;
+            display: grid;
+        }
+
+        html {
+            font: normal 100%/1.5 Calibri, sans-serif, serif;
+        }
+
+        input[size] {
+            background: #fff;
+            width: calc(attr(size) * 1fr);
+        }
+
+    </style>
+</head>
+<body>
+<form action="#">
+    <input size="12" type="text">
+    <input size="6" type="text">
+    <input size="24" type="text">
+</form>
+</body>
+</html>
