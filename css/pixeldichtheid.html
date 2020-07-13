@@ -1,0 +1,25 @@
+<!doctype html>
+<html dir="ltr" lang="nl">
+<head>
+    <meta charset="utf-8">
+    <title>Pixeldichtheid</title>
+    <style>
+        :root {
+            --dpd: 1234;
+        }
+    </style>
+</head>
+<body>
+
+<script>
+    "use strict";
+
+    var dpd = window.devicePixelRatio;
+
+    var root = document.documentElement;
+
+    root.style.setProperty('--dpd', dpd);
+
+</script>
+</body>
+</html>
