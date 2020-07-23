@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>three.js webgl - controls - deviceorientation</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <title>three.js webgl - controls - deviceorientation</title>
     <style>
         body {
             margin: 0;
@@ -15,71 +15,8 @@
             overscroll-behavior: none;
         }
 
-        a {
-            color: #ff0;
-            text-decoration: none;
-        }
-
-        a:hover {
-            text-decoration: underline;
-        }
-
-        button {
-            cursor: pointer;
-            text-transform: uppercase;
-        }
-
         canvas {
             display: block;
-        }
-
-        #info {
-            position: absolute;
-            top: 0px;
-            width: 100%;
-            padding: 10px;
-            box-sizing: border-box;
-            text-align: center;
-            -moz-user-select: none;
-            -webkit-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
-            pointer-events: none;
-            z-index: 1; /* TODO Solve this in HTML */
-        }
-
-        a, button, input, select {
-            pointer-events: auto;
-        }
-
-        .dg.ac {
-            -moz-user-select: none;
-            -webkit-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
-            z-index: 2 !important; /* TODO Solve this in HTML */
-        }
-
-        #overlay {
-            position: absolute;
-            z-index: 2;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: rgba(0,0,0,0.7);
-        }
-
-        #overlay button {
-            background: #ffffff;
-            border: 0;
-            color: #000000;
-            padding: 16px 20px;
-            text-transform: uppercase;
-            cursor: pointer;
         }
 
         #notSupported {
@@ -92,14 +29,6 @@
     </style>
 </head>
 <body>
-<div id="overlay">
-    <button id="startButton">Start Demo</button>
-</div>
-<div id="info">
-    <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> - equirectangular panorama demo with DeviceOrientation controls.<br/>
-    photo by <a href="http://www.flickr.com/photos/jonragnarsson/2294472375/" target="_blank" rel="noopener">Jón Ragnarsson</a>.
-</div>
-
 <script type="module">
 
     import * as THREE from './three.module.js';
@@ -109,9 +38,6 @@
     var camera, scene, renderer, controls;
 
     function init() {
-
-        var overlay = document.getElementById( 'overlay' );
-        overlay.remove();
 
         camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 1100 );
 
