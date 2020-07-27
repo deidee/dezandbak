@@ -6,14 +6,14 @@
     <style>
         #logo {
             background: black;
-            height: 450px;
-            width: 450px;
+            height: 451px;
+            width: 451px;
         }
     </style>
 </head>
 <body>
 <canvas id="logo"></canvas>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.12.11/paper-full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.12.11/paper-core.min.js"></script>
 <script>
     "use strict";
 
@@ -32,15 +32,23 @@
     window.onload = function() {
         var canvas = document.getElementById('logo');
         paper.setup(canvas);
-
         var circle, rect;
 
-        drawLetter(0, d);
-        x += 8 * d;
-        y -= 10 * d;
-        drawLetter(1, d);
-        y -= 2 * d;
-        drawLetter(2, d);
+        //paper.onMouseDown = drawLetters();
+
+        drawLetters();
+
+        function drawLetters() {
+            x = d;
+            y = d;
+
+            drawLetter(0, d);
+            x += 8 * d;
+            y -= 10 * d;
+            drawLetter(1, d);
+            y -= 2 * d;
+            drawLetter(2, d);
+        }
 
         function drawLetter(letter, d1) {
             var i;
