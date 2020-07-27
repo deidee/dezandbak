@@ -23,12 +23,9 @@
     letters[2] = [[0,1,1,1,1],[0,0,0,0,1],[0,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]]; // J
     letters[3] = [[0,1,1,1,1],[1,0,0,0,0],[0,1,1,1,0],[0,0,0,0,1],[1,1,1,1,0]]; // s
 
-    var i = 0;
-    var j = 0;
-    var d = 25;
+    var d = 25; // Diameter
     var x = d;
     var y = d;
-    var letter = 0;
 
     paper.install(window);
 
@@ -38,35 +35,69 @@
 
         var circle;
 
-        drawLetter(0);
+        drawLetter(0, d);
         x += 8 * d;
         y -= 10 * d;
-        drawLetter(1);
+        drawLetter(1, d);
         y -= 2 * d;
-        drawLetter(2);
+        drawLetter(2, d);
 
-        function drawLetter(letter) {
+        function drawLetter(letter, d1) {
+            var i;
+            var j;
+
             for(j = 0; j < 5; ++j)
             {
                 for(i = 0; i < 5; ++i)
                 {
                     if(letters[letter][j][i] === 0)
                     {
-
-
-                        circle = new Path.Circle(new Point(x, y), d);
+                        circle = new Path.Circle(new Point(x, y), d1);
                         circle.fillColor = getColor(letter);
+                        circle.onMouseEnter = function(e) {
+                            e.target.fillColor = getColor(letter);
+                        };
+                    } else {
+                        drawLetter2(letter, 5);
+                    }
+
+                    x += d1 * 2;
+                }
+
+                y += d1 * 2;
+                x -= 10 * d1;
+            }
+        }
+
+        function drawLetter2(letter, d2) {
+            var i;
+            var j;
+            x -= 20;
+            y -= 20;
+
+            for(j = 0; j < 5; ++j)
+            {
+                for(i = 0; i < 5; ++i)
+                {
+                    if(letters[letter][j][i] === 0)
+                    {
+                        circle = new Path.Circle(new Point(x, y), d2);
+                        circle.fillColor = getColor(letter);
+                        //circle.smooth();
                         circle.onMouseEnter = function(e) {
                             e.target.fillColor = getColor(letter);
                         };
                     }
 
-                    x += d * 2;
+                    x += 5 * 2;
                 }
 
-                y += d * 2;
-                x -= 10 * d;
+                y += 10;
+                x -= 10 * 5;
             }
+
+            x += 20;
+            y -= 30;
         }
 
         function getColor(letter) {
