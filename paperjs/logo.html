@@ -36,27 +36,48 @@
         var canvas = document.getElementById('logo');
         paper.setup(canvas);
 
-        var tool = new Tool();
         var circle;
 
-        for(j = 0; j < 5; ++j)
-        {
-            for(i = 0; i < 5; ++i)
+        drawLetter(0);
+        x += 8 * d;
+        y -= 10 * d;
+        drawLetter(1);
+        y -= 2 * d;
+        drawLetter(2);
+
+        function drawLetter(letter) {
+            for(j = 0; j < 5; ++j)
             {
-                if(letters[letter][j][i] === 0)
+                for(i = 0; i < 5; ++i)
                 {
-                    circle = new Path.Circle(new Point(x, y), d);
-                    circle.fillColor = new Color(Math.random(), 1, 1, Math.random() / 2);
-                    circle.onMouseEnter = function(e) {
-                        e.target.fillColor = new Color(Math.random(), 1, 1, Math.random() / 2);
-                    };
+                    if(letters[letter][j][i] === 0)
+                    {
+
+
+                        circle = new Path.Circle(new Point(x, y), d);
+                        circle.fillColor = getColor(letter);
+                        circle.onMouseEnter = function(e) {
+                            e.target.fillColor = getColor(letter);
+                        };
+                    }
+
+                    x += d * 2;
                 }
 
-                x += d * 2;
+                y += d * 2;
+                x -= 10 * d;
             }
+        }
 
-            y += d * 2;
-            x -= 10 * d;
+        function getColor(letter) {
+            switch(letter) {
+                case 0:
+                    return new Color(Math.random(), 1, 1, Math.random() / 2);
+                case 1:
+                    return new Color(1, Math.random(), 1, Math.random() / 2);
+                default:
+                    return new Color(1, 1, Math.random(), Math.random() / 2);
+            }
         }
 
         // Draw the view now:
