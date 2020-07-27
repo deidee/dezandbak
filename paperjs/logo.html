@@ -1,0 +1,67 @@
+<!doctype html>
+<html dir="ltr" lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Paper.js</title>
+    <style>
+        #logo {
+            background: black;
+            height: 512px;
+            width: 512px;
+        }
+    </style>
+</head>
+<body>
+<canvas id="logo"></canvas>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.12.11/paper-full.min.js"></script>
+<script>
+    "use strict";
+
+    var letters = [];
+    letters[0] = [[0,1,1,1,0],[1,0,0,0,1],[1,1,1,1,1],[1,0,0,0,1],[1,0,0,0,1]]; // A
+    letters[1] = [[0,1,1,1,1],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[0,1,1,1,1]]; // C
+    letters[2] = [[0,1,1,1,1],[0,0,0,0,1],[0,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]]; // J
+    letters[3] = [[0,1,1,1,1],[1,0,0,0,0],[0,1,1,1,0],[0,0,0,0,1],[1,1,1,1,0]]; // s
+
+    var i = 0;
+    var j = 0;
+    var d = 25;
+    var x = d;
+    var y = d;
+    var letter = 0;
+
+    paper.install(window);
+
+    window.onload = function() {
+        var canvas = document.getElementById('logo');
+        paper.setup(canvas);
+
+        var tool = new Tool();
+        var circle;
+
+        for(j = 0; j < 5; ++j)
+        {
+            for(i = 0; i < 5; ++i)
+            {
+                if(letters[letter][j][i] === 0)
+                {
+                    circle = new Path.Circle(new Point(x, y), d);
+                    circle.fillColor = new Color(Math.random(), 1, 1, Math.random() / 2);
+                    circle.onMouseEnter = function(e) {
+                        e.target.fillColor = new Color(Math.random(), 1, 1, Math.random() / 2);
+                    };
+                }
+
+                x += d * 2;
+            }
+
+            y += d * 2;
+            x -= 10 * d;
+        }
+
+        // Draw the view now:
+        paper.view.draw();
+    }
+</script>
+</body>
+</html>
