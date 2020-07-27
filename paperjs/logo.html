@@ -33,7 +33,7 @@
         var canvas = document.getElementById('logo');
         paper.setup(canvas);
 
-        var circle;
+        var circle, rect;
 
         drawLetter(0, d);
         x += 8 * d;
@@ -83,10 +83,11 @@
                     {
                         circle = new Path.Circle(new Point(x, y), d2);
                         circle.fillColor = getColor(letter);
-                        //circle.smooth();
                         circle.onMouseEnter = function(e) {
                             e.target.fillColor = getColor(letter);
                         };
+                    } else {
+                        drawLetter3(letter);
                     }
 
                     x += 5 * 2;
@@ -98,6 +99,33 @@
 
             x += 20;
             y -= 30;
+        }
+
+        function drawLetter3(letter) {
+            var i;
+            var j;
+            x -= 4;
+            y -= 4;
+
+            for(j = 0; j < 5; ++j)
+            {
+                for(i = 0; i < 5; ++i)
+                {
+                    if(letters[letter][j][i] === 1)
+                    {
+                        rect = new Path.Rectangle(new Point(x, y), new Point(x + 1, y + 1));
+                        rect.fillColor = new Color(1, 1, 1, 1);
+                    }
+
+                    x += 2;
+                }
+
+                y += 2;
+                x -= 10;
+            }
+
+            x += 4;
+            y -= 6;
         }
 
         function getColor(letter) {
