@@ -7,6 +7,9 @@
         #logo {
             background: black;
             height: 651px;
+            max-width: 100%;
+            overflow: hidden;
+            resize: both;
             width: 251px;
         }
 
@@ -40,8 +43,6 @@
         var canvas = document.getElementById('logo');
         paper.setup(canvas);
         var circle, rect;
-
-        //paper.onMouseDown = drawLetters();
 
         drawLetters();
 
@@ -166,7 +167,22 @@
 
         // Draw the view now:
         paper.view.draw();
+
+        view.onClick = function(e) {
+            paper.project.activeLayer.removeChildren();
+            drawLetters();
+            paper.view.draw();
+        }
+
+        window.addEventListener('resize', function(e){
+            paper.project.activeLayer.removeChildren();
+            view.viewSize = [canvas.offsetWidth, canvas.offsetHeight];
+            drawLetters();
+            paper.view.draw();
+        });
     }
+
+
 </script>
 </body>
 </html>
