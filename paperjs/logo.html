@@ -6,8 +6,15 @@
     <style>
         #logo {
             background: black;
-            height: 451px;
-            width: 451px;
+            height: 651px;
+            width: 251px;
+        }
+
+        @media (min-width: 600px) {
+            #logo {
+                height: 451px;
+                width: 451px;
+            }
         }
     </style>
 </head>
@@ -42,12 +49,22 @@
             x = d;
             y = d;
 
-            drawLetter(0, d);
-            x += 8 * d;
-            y -= 10 * d;
-            drawLetter(1, d);
-            y -= 2 * d;
-            drawLetter(2, d);
+            var width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+
+            if(width >= 600) {
+                drawLetter(0, d);
+                x += 8 * d;
+                y -= 10 * d;
+                drawLetter(1, d);
+                y -= 2 * d;
+                drawLetter(2, d);
+            } else {
+                drawLetter(0, d);
+                y -= 2 * d;
+                drawLetter(1, d);
+                y -= 2 * d;
+                drawLetter(2, d);
+            }
         }
 
         function drawLetter(letter, d1) {
