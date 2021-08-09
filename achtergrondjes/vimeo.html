@@ -41,21 +41,9 @@
 <body id="top">
 <header>
     <div class="vimeo-container">
-        <div id="video"></div>
+        <iframe src="https://player.vimeo.com/video/425798945?background=1&amp;app_id=58479" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen title="Carqon, the new standard in urban mobility"></iframe>
+        <script src="https://player.vimeo.com/api/player.js"></script>
     </div>
 </header>
-<script src="https://player.vimeo.com/api/player.js"></script>
-<script>
-    var options = {
-        url: "https://vimeo.com/425798945",
-        background: true
-    };
-
-    var videoPlayer = new Vimeo.Player('video', options);
-
-    videoPlayer.on('play', function() {
-        console.log('Played the video');
-    });
-</script>
 </body>
 </html>
