@@ -1,4 +1,4 @@
 from PIL import Image
 
 img = Image.new("CMYK", (480, 480))
-img.save('test.jpg')
+img.save('test.pdf')
