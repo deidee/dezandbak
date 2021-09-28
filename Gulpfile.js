@@ -2,7 +2,7 @@
 
 let gulp = require('gulp');
 let less = require('gulp-less');
-let sass = require('gulp-sass');
+let sass = require('gulp-sass')(require('node-sass'));
 
 gulp.task('less', function () {
     return gulp.src('./less/**/*.less')
