@@ -2,10 +2,51 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
     <title>Gyro</title>
+    <style>
+        :root {
+            --a1: 0;
+            --b1: 0;
+            --c1: 0;
+            --d1: 0;
+            --a2: 0;
+            --b2: 0;
+            --c2: 0;
+            --d2: 0;
+            --a3: 0;
+            --b3: 0;
+            --c3: 0;
+            --d3: 0;
+            --a4: 0;
+            --b4: 0;
+            --c4: 0;
+            --d4: 0;
+            --yaw: 0;
+            --pitch: 0;
+            --roll: 0;
+        }
+
+        #square {
+            background: black;
+            height: 6rem;
+            margin: 6rem auto;
+            position: relative;
+            /*
+            transform: matrix3d(var(--a1), var(--b1), var(--c1), var(--d1), var(--a2), var(--b2), var(--c2), var(--d2), var(--a3), var(--b3), var(--c3), var(--d3), var(--a4), var(--b4), var(--c4), var(--d4));
+             */
+            transform: rotateX(var(--pitch)) rotateY(var(--yaw)) rotateZ(var(--roll));
+            transform-origin: center;
+            /*
+            transition: .125s linear transform;
+             */
+            width: 6rem;
+        }
+    </style>
 </head>
 <body>
 <div id="container">
+    <div id="square"></div>
     <div id="event"></div>
     <div id="alpha"></div>
     <div id="beta"></div>
@@ -94,6 +135,7 @@
                     } ) ),
                     yaw = orientation.yaw / degRad,
                     pitch = orientation.pitch / degRad,
+                    roll = orientation.roll / degRad,
                     altyaw = yaw,
                     factor;
 
@@ -145,6 +187,11 @@
 
             alphaContainer.innerText = lastYaw;
             betaContainer.innerText = lastPitch;
+            gammaContainer.innerText = orientation.roll;
+
+            document.body.style.setProperty('--yaw', Math.round(lastYaw) + 'deg');
+            document.body.style.setProperty('--pitch', Math.round(lastPitch) + 'deg');
+            document.body.style.setProperty('--roll', Math.round(roll) + 'deg');
         }
 
         function adaptDiffTilt() {
@@ -178,6 +225,7 @@
             /* [m00 m01 m02] 0 1 2
              * [m10 m11 m12] 3 4 5
              * [m20 m21 m22] 6 7 8 */
+            //matrix3d(a1, b1, c1, d1, a2, b2, c2, d2, a3, b3, c3, d3, a4, b4, c4, d4)
 
             if (matrix[3] > 0.9999) { // singularity at north pole
                 heading = Math.atan2(matrix[2],matrix[8]);
@@ -192,6 +240,10 @@
                 bank = Math.atan2(-matrix[5],matrix[4]);
                 attitude = Math.asin(matrix[3]);
             }
+
+/*            document.body.style.setProperty('--yaw', heading + 'deg');
+            document.body.style.setProperty('--pitch', attitude + 'deg');
+            document.body.style.setProperty('--roll', bank + 'deg');*/
 
             return new Object( { yaw:heading, pitch:attitude, roll:bank } )
         }
