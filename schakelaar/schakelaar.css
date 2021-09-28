@@ -1,0 +1,37 @@
+.switch-on::after, .switch-off::before {
+  background: #fff;
+  border-radius: 50%;
+  content: '';
+  display: inline-block;
+  height: 1rem;
+  position: absolute;
+  top: 4px;
+  width: 1rem; }
+
+.switch-on::before, .switch-off::after {
+  color: #fff;
+  display: inline-block;
+  position: absolute; }
+
+.switch-on, .switch-off {
+  border-radius: .75rem;
+  box-sizing: border-box;
+  display: inline-block;
+  height: 1.5rem;
+  position: relative;
+  vertical-align: middle;
+  width: 40px; }
+  .switch-on {
+    background: lime; }
+    .switch-on::after {
+      left: 4px; }
+    .switch-on::before {
+      content: 'v';
+      right: 4px; }
+  .switch-off {
+    background: red; }
+    .switch-off::after {
+      content: 'x';
+      left: 4px; }
+    .switch-off::before {
+      right: 4px; }
