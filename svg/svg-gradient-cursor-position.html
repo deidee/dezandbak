@@ -1,0 +1,47 @@
+<!doctype html>
+<html dir="ltr" lang="nl">
+<head>
+    <meta charset="utf-8">
+    <title>SVG</title>
+    <style>
+        :root {
+            --x: 0;
+            --y: 0;
+        }
+
+        svg {
+            height: 75vh;
+        }
+    </style>
+</head>
+<body id="top">
+<svg viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <radialGradient id="myGradient" cx="0.5" cy="0.5">
+            <stop offset="10%" stop-color="gold" />
+            <stop offset="95%" stop-color="red" />
+        </radialGradient>
+    </defs>
+    <circle cx="5" cy="5" r="4" fill="url('#myGradient')" />
+</svg>
+<script>
+    "use strict";
+    var root = document.documentElement,
+        width = window.innerWidth,
+        height = window.innerHeight;
+
+    var myGradient = document.getElementById('myGradient');
+
+    document.onmousemove = function(t) {
+        var x = t.clientX / width,
+            y = t.clientY / height;
+
+        root.style.setProperty("--x", x)
+            ,root.style.setProperty("--y", y);
+
+        myGradient.setAttribute('cx', x);
+        myGradient.setAttribute('cy', y);
+    };
+</script>
+</body>
+</html>
