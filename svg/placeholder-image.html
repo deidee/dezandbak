@@ -4,6 +4,10 @@
     <meta charset="utf-8">
     <title>Placeholder image</title>
     <style>
+        body {
+            display: flex;
+        }
+
         .resize {
             background: cyan;
             height: 480px;
@@ -12,7 +16,7 @@
             width: 768px;
         }
 
-        .resize img {
+        .resize > * {
             height: 100%;
             vertical-align: bottom;
             width: 100%;
@@ -22,6 +26,9 @@
 <body>
 <div class="resize">
     <img src="placeholder-image.svg" alt="" height="480" width="768">
+</div>
+<div class="resize">
+    <object data="placeholder-image.svg" type="image/svg+xml"></object>
 </div>
 </body>
 </html>
