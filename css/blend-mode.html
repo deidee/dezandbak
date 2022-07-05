@@ -1,0 +1,32 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Blend mode</title>
+    <style>
+        .background {
+            background: red;
+            height: 300px;
+            width: 300px;
+        }
+
+        .foreground {
+            background: lime;
+            left: 50px;
+            position: absolute;
+            height: 100px;
+            mix-blend-mode: multiply;
+            top: 100px;
+            width: 500px;
+        }
+
+        .transform {
+            transform: translate3d(150px, 150px, 5px);
+        }
+    </style>
+</head>
+<div class="background">
+    <div class="foreground"></div>
+    <div class="foreground transform"></div>
+</div>
+</html>
