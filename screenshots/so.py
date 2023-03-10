@@ -15,12 +15,12 @@ def execute_command(command):
 
 def do_screen_capturing(url, screen_path, width, height):
     print("Capturing screen..")
-    driver = webdriver.chrome
+    driver = webdriver.Chrome()
     # it save service log file in same directory
     # if you want to have log file stored else where
     # initialize the webdriver.PhantomJS() as
-    # driver = webdriver.PhantomJS(service_log_path='ghostdriver.log')
-    driver.set_script_timeout(30)
+    # driver = webdriver.Chrome(service_log_path='ghostdriver.log')
+    driver.set_page_load_timeout(30)
     if width and height:
         driver.set_window_size(width, height)
     driver.get(url)
