@@ -30,7 +30,7 @@ def do_screen_capturing(url, screen_path, width, height):
 def do_crop(params):
     print("Croping captured image..")
     command = [
-        'convert',
+        'magick convert',
         params['screen_path'],
         '-crop', '%sx%s+0+0' % (params['width'], params['height']),
         params['crop_path']
@@ -41,7 +41,7 @@ def do_crop(params):
 def do_thumbnail(params):
     print("Generating thumbnail from croped captured image..")
     command = [
-        'convert',
+        'magick convert',
         params['crop_path'],
         '-filter', 'Lanczos',
         '-thumbnail', '%sx%s' % (params['width'], params['height']),
