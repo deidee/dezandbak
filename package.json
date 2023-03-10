@@ -26,13 +26,13 @@
   "dependencies": {
     "grunt": "^1.4.1",
     "grunt-sass": "^3.1.0",
-    "gulp": "^4.0.2",
-    "gulp-less": "^5.0.0",
-    "gulp-sass": "^5.0.0",
-    "gulp-uglify": "^3.0.2",
+    "gulp": "^*",
+    "gulp-less": "*",
+    "gulp-sass": "*",
+    "gulp-uglify": "*",
     "gyronorm": "^2.0.6",
-    "node-sass": "^6.0.1",
     "readable-stream": "^3.6.0",
+    "sass": "^1.58.3",
     "sass-color-calculator": "^0.1.4"
   }
 }

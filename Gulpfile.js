@@ -1,8 +1,8 @@
 'use strict';
 
-let gulp = require('gulp');
+const gulp = require('gulp');
 let less = require('gulp-less');
-let sass = require('gulp-sass')(require('node-sass'));
+const sass = require('gulp-sass')(require('sass'));
 
 gulp.task('less', function () {
     return gulp.src('./less/**/*.less')
@@ -12,7 +12,7 @@ gulp.task('less', function () {
 
 gulp.task('sass', function () {
     return gulp.src(['./**/*.scss', '!node_modules/**/*'])
-        .pipe(sass())
+        .pipe(sass({includePaths: ['node_modules'], outputStyle: 'expanded'}))
         .pipe(gulp.dest('./'));
 });
 
