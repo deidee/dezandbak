@@ -18,7 +18,7 @@ def do_screen_capturing(url, screen_path, width, height):
     driver = webdriver.Chrome()
     # it save service log file in same directory
     # if you want to have log file stored else where
-    # initialize the webdriver.PhantomJS() as
+    # initialize the webdriver.Chrome() as
     # driver = webdriver.Chrome(service_log_path='ghostdriver.log')
     driver.set_page_load_timeout(30)
     if width and height:
@@ -28,7 +28,7 @@ def do_screen_capturing(url, screen_path, width, height):
 
 
 def do_crop(params):
-    print("Croping captured image..")
+    print("Cropping captured image..")
     command = [
         'magick convert',
         params['screen_path'],
@@ -39,7 +39,7 @@ def do_crop(params):
 
 
 def do_thumbnail(params):
-    print("Generating thumbnail from croped captured image..")
+    print("Generating thumbnail from cropped captured image..")
     command = [
         'magick convert',
         params['crop_path'],
