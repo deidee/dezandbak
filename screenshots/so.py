@@ -2,6 +2,7 @@
 import os
 from subprocess import Popen, PIPE
 from selenium import webdriver
+from urllib.parse import urlparse
 
 abspath = lambda *p: os.path.abspath(os.path.join(*p))
 ROOT = abspath(os.path.dirname(__file__))
@@ -103,9 +104,11 @@ if __name__ == '__main__':
         add phantomjs to system path (on windows)
     '''
 
-    url = 'http://stackoverflow.com/questions/1197172/how-can-i-take-a-screenshot-image-of-a-website-using-python'
+    url = 'https://galeriehelder.nl/'
+    o = urlparse(url)
     screen_path, crop_path, thumbnail_path = get_screen_shot(
-        url=url, filename='sof.png',
+        width=1920, height=1080,
+        url=url, filename=o.hostname + '.png',
         crop=True, crop_replace=False,
         thumbnail=True, thumbnail_replace=False,
         thumbnail_width=200, thumbnail_height=150,
