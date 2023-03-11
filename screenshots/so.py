@@ -98,10 +98,8 @@ if __name__ == '__main__':
     '''
         Requirements:
         Install NodeJS
-        Using Node's package manager install phantomjs: npm -g install phantomjs
         install selenium (in your virtualenv, if you are using that)
         install imageMagick
-        add phantomjs to system path (on windows)
     '''
 
     url = 'https://galeriehelder.nl/'
