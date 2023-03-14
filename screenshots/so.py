@@ -23,6 +23,7 @@ def do_screen_capturing(url, screen_path, width, height):
     # driver = webdriver.Chrome(service_log_path='ghostdriver.log')
     driver.set_page_load_timeout(30)
     if width and height:
+        #driver.set_window_position(0, -2000)
         driver.set_window_size(width, height)
     driver.get(url)
     driver.save_screenshot(screen_path)
