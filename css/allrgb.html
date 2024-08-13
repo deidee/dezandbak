@@ -41,23 +41,22 @@
 
         main {
             background-color: green;
-            display: flex;
-            flex-basis: 100%;
-            flex-grow: 1;
-            flex-shrink: 1;
             max-width: 100%;
+
+            display: grid;
+            /*grid-template-columns: minmax(calc(var(--width) / 16), 1fr) minmax(50%, auto);*/
+            grid-template-columns: repeat(auto-fill, minmax(512px, 50%) minmax(50%, 100%));
+            grid-gap: 0;
         }
 
         .aside {
             background: blue;
-            flex-basis: calc(var(--width) / 16);
         }
 
         .image {
             background: yellow;
-            height: calc(100vh - 1.5rem);
+            min-width: 50%;
             overflow: hidden;
-            width: 100%;
         }
         
         .image img {
