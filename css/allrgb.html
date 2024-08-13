@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>allRGB layout test</title>
     <style>
+        :root {
+            --width: 4096px;
+        }
+
         *, *::after, *::before {
             border: 0;
             box-sizing: border-box;
@@ -22,16 +26,44 @@
             min-height: 100vh;
         }
 
+        footer {
+            display: none;
+        }
+
+        header {
+            background: cyan;
+            flex-shrink: 0;
+        }
+
+        html {
+            font: normal 100%/1.5 sans-serif;
+        }
+
         main {
             background-color: green;
             display: flex;
             flex-basis: 100%;
             flex-grow: 1;
             flex-shrink: 1;
+            max-width: 100%;
         }
 
         .aside {
             background: blue;
+            flex-basis: calc(var(--width) / 16);
+        }
+
+        .image {
+            background: yellow;
+            height: calc(100vh - 1.5rem);
+            overflow: hidden;
+            width: 100%;
+        }
+        
+        .image img {
+            background: orange;
+            display: block;
+            vertical-align: bottom;
         }
     </style>
 </head>
@@ -41,7 +73,9 @@
 </header>
 <main>
     <div class="aside">[aside]</div>
-    <div class="image">[image]</div>
+    <div class="image">
+        <img src="https://allrgb.com/images/thingy.png" alt="">
+    </div>
 </main>
 <footer>[footer]</footer>
 </body>
