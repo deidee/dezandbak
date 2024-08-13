@@ -1,37 +1,50 @@
-.switch-on::after, .switch-off::before {
+.switch-toggle:not(:checked) + label::before, .switch-off::before, .switch-toggle:checked + label::after, .switch-on::after {
   background: #fff;
   border-radius: 50%;
-  content: '';
+  content: "";
   display: inline-block;
   height: 1rem;
   position: absolute;
   top: 4px;
-  width: 1rem; }
+  width: 1rem;
+}
 
-.switch-on::before, .switch-off::after {
+.switch-toggle:not(:checked) + label::after, .switch-off::after, .switch-toggle:checked + label::before, .switch-on::before {
   color: #fff;
   display: inline-block;
-  position: absolute; }
+  position: absolute;
+}
 
-.switch-on, .switch-off {
-  border-radius: .75rem;
+.switch-toggle:not(:checked) + label, .switch-off, .switch-toggle:checked + label, .switch-on {
+  border-radius: 0.75rem;
   box-sizing: border-box;
   display: inline-block;
   height: 1.5rem;
   position: relative;
   vertical-align: middle;
-  width: 40px; }
-  .switch-on {
-    background: lime; }
-    .switch-on::after {
-      left: 4px; }
-    .switch-on::before {
-      content: 'v';
-      right: 4px; }
-  .switch-off {
-    background: red; }
-    .switch-off::after {
-      content: 'x';
-      left: 4px; }
-    .switch-off::before {
-      right: 4px; }
+  width: 40px;
+}
+.switch-toggle:checked + label, .switch-on {
+  background: lime;
+}
+.switch-toggle:checked + label::after, .switch-on::after {
+  left: 4px;
+}
+.switch-toggle:checked + label::before, .switch-on::before {
+  content: "v";
+  right: 4px;
+}
+.switch-toggle:not(:checked) + label, .switch-off {
+  background: red;
+}
+.switch-toggle:not(:checked) + label::after, .switch-off::after {
+  content: "x";
+  left: 4px;
+}
+.switch-toggle:not(:checked) + label::before, .switch-off::before {
+  right: 4px;
+}
+
+.switch-toggle + label {
+  transition: background-color 1s ease;
+}

@@ -65,3 +65,17 @@
 .switch-off {
   @extend %switch-off !optional;
 }
+
+.switch-toggle {
+  + label {
+    transition: background-color 1s ease;
+  }
+
+  &:checked + label {
+    @extend %switch-on !optional;
+  }
+
+  &:not(:checked) + label {
+    @extend %switch-off !optional;
+  }
+}

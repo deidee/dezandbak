@@ -50,6 +50,7 @@ html {
     flex: 0 0 $width;
     max-width: $width;
     min-height: 1px;
+    overflow: hidden;
   }
 }
 
