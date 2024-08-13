@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>allRGB layout test</title>
+    <style>
+        *, *::after, *::before {
+            border: 0;
+            box-sizing: border-box;
+            font-size: 1em;
+            outline: 0;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: red;
+            display: flex;
+            flex-direction: column;
+            flex-wrap: wrap;
+            min-height: 100vh;
+        }
+
+        main {
+            background-color: green;
+            display: flex;
+            flex-basis: 100%;
+            flex-grow: 1;
+            flex-shrink: 1;
+        }
+
+        .aside {
+            background: blue;
+        }
+    </style>
+</head>
+<body>
+<header>
+    <nav>[nav]</nav>
+</header>
+<main>
+    <div class="aside">[aside]</div>
+    <div class="image">[image]</div>
+</main>
+<footer>[footer]</footer>
+</body>
+</html>
