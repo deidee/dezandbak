@@ -2,6 +2,7 @@
 import os
 from subprocess import Popen, PIPE
 from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
 from urllib.parse import urlparse
 
 abspath = lambda *p: os.path.abspath(os.path.join(*p))
@@ -16,7 +17,9 @@ def execute_command(command):
 
 def do_screen_capturing(url, screen_path, width, height):
     print("Capturing screen..")
-    driver = webdriver.Chrome()
+    service = Service()
+    options = webdriver.ChromeOptions()
+    driver = webdriver.Chrome(service=service, options=options)
     # it save service log file in same directory
     # if you want to have log file stored else where
     # initialize the webdriver.Chrome() as
@@ -27,6 +30,7 @@ def do_screen_capturing(url, screen_path, width, height):
         driver.set_window_size(width, height)
     driver.get(url)
     driver.save_screenshot(screen_path)
+    driver.quit()
 
 
 def do_crop(params):
