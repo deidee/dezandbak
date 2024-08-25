@@ -951,14 +951,20 @@
             </circle>
         </symbol>
     </defs>
-    <rect x="0" y="0" width="300" height="100" stroke="black" stroke-width="1" />
-    <circle cx="0" cy="50" r="15" fill="blue" stroke="black" stroke-width="1">
+    <use href="#world" x="0">
         <animate
-                attributeName="cx"
+                attributeName="x"
                 from="0"
-                to="500"
+                to="2000"
                 dur="5s"
                 repeatCount="indefinite" />
-    </circle>
-    <use href="#world"/>
+    </use>
+    <use href="#world" x="-2000">
+        <animate
+                attributeName="x"
+                from="-2000"
+                to="0"
+                dur="5s"
+                repeatCount="indefinite" />
+    </use>
 </svg>
