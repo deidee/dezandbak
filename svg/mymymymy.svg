@@ -5,29 +5,39 @@
             <stop offset="0%" stop-color="#FF99CC"/>
             <stop offset="100%" stop-color="#FF3366"/>
         </linearGradient>
+
+        <!-- define one leaf group as symbol -->
+        <symbol id="leaf">
+            <g>
+                <path
+                        d="M200,80
+                       C200,25 380,25 200,180
+                       C20,25  200,25 200,80 Z"
+                        fill="url(#grad)"
+                        stroke="#CC0044" stroke-width="4"
+                        stroke-linejoin="round" stroke-linecap="round"/>
+                <g stroke="#FFFFFF" stroke-width="6" stroke-linecap="round">
+                    <!-- Enlarged Y: longer stem and arms -->
+                    <line x1="200" y1="180" x2="200" y2="140"/>
+                    <line x1="200" y1="140" x2="170" y2="110"/>
+                    <line x1="200" y1="140" x2="230" y2="110"/>
+                </g>
+            </g>
+        </symbol>
     </defs>
 
-    <!-- define one leaf group -->
-    <symbol id="leaf">
-        <g>
-            <path
-                    d="M200,80
-         C200,25 380,25 200,180
-         C20,25  200,25 200,80 Z"
-                    fill="url(#grad)"
-                    stroke="#CC0044" stroke-width="4"
-                    stroke-linejoin="round" stroke-linecap="round"/>
-            <g stroke="#FFFFFF" stroke-width="6" stroke-linecap="round">
-                <line x1="200" y1="180" x2="200" y2="150"/>
-                <line x1="200" y1="150" x2="180" y2="130"/>
-                <line x1="200" y1="150" x2="220" y2="130"/>
-            </g>
-        </g>
-    </symbol>
-
-    <!-- place four leaves with their tips touching center -->
-    <use href="#leaf" transform="translate(0,20) rotate(0 200 200)"/>
-    <use href="#leaf" transform="translate(0,20) rotate(90 200 200)"/>
-    <use href="#leaf" transform="translate(0,20) rotate(180 200 200)"/>
-    <use href="#leaf" transform="translate(0,20) rotate(270 200 200)"/>
+    <!-- group all leaves and animate rotation around center -->
+    <g id="clover">
+        <use href="#leaf" transform="translate(0,20) rotate(0 200 200)"/>
+        <use href="#leaf" transform="translate(0,20) rotate(90 200 200)"/>
+        <use href="#leaf" transform="translate(0,20) rotate(180 200 200)"/>
+        <use href="#leaf" transform="translate(0,20) rotate(270 200 200)"/>
+        <!-- continuous rotation -->
+        <animateTransform attributeName="transform"
+                          type="rotate"
+                          from="0 200 200"
+                          to="360 200 200"
+                          dur="10s"
+                          repeatCount="indefinite"/>
+    </g>
 </svg>
