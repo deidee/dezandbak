@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+    <defs>
+        <!-- shared pink-to-red gradient -->
+        <linearGradient id="grad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#FF99CC"/>
+            <stop offset="100%" stop-color="#FF3366"/>
+        </linearGradient>
+    </defs>
+
+    <!-- define one leaf group -->
+    <symbol id="leaf">
+        <g>
+            <path
+                    d="M200,80
+         C200,25 380,25 200,180
+         C20,25  200,25 200,80 Z"
+                    fill="url(#grad)"
+                    stroke="#CC0044" stroke-width="4"
+                    stroke-linejoin="round" stroke-linecap="round"/>
+            <g stroke="#FFFFFF" stroke-width="6" stroke-linecap="round">
+                <line x1="200" y1="180" x2="200" y2="150"/>
+                <line x1="200" y1="150" x2="180" y2="130"/>
+                <line x1="200" y1="150" x2="220" y2="130"/>
+            </g>
+        </g>
+    </symbol>
+
+    <!-- place four leaves with their tips touching center -->
+    <use href="#leaf" transform="translate(0,20) rotate(0 200 200)"/>
+    <use href="#leaf" transform="translate(0,20) rotate(90 200 200)"/>
+    <use href="#leaf" transform="translate(0,20) rotate(180 200 200)"/>
+    <use href="#leaf" transform="translate(0,20) rotate(270 200 200)"/>
+</svg>
