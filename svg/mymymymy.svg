@@ -1,18 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
     <defs>
-        <!-- define one leaf as a symbol with inheriting stroke -->
+        <style>
+            * {
+                transform-box: fill-box;
+            transform-origin: bottom center;
+            }
+        </style>
+        <!-- define one leaf as a voluptuous heart with inheriting stroke -->
         <symbol id="leaf">
             <path
-                    d="M200,80
-                   C200,25 380,25 200,180
-                   C20,25  200,25 200,80 Z"
+                    d="M200,100
+                   C200,20 390,20 200,220
+                   C10,20  200,20 200,100 Z"
                     stroke-width="4"
                     stroke-linejoin="round" stroke-linecap="round"/>
             <g stroke-linecap="round">
                 <!-- Y stems inherit the stroke color from the use -->
-                <line x1="200" y1="180" x2="200" y2="140" stroke-width="6"/>
-                <line x1="200" y1="140" x2="170" y2="110" stroke-width="6"/>
-                <line x1="200" y1="140" x2="230" y2="110" stroke-width="6"/>
+                <line x1="200" y1="220" x2="200" y2="170" stroke-width="6"/>
+                <line x1="200" y1="170" x2="160" y2="130" stroke-width="6"/>
+                <line x1="200" y1="170" x2="240" y2="130" stroke-width="6"/>
             </g>
         </symbol>
     </defs>
@@ -20,16 +26,26 @@
     <!-- group all leaves and animate rotation around center -->
     <g id="clover">
         <!-- Four leaves with distinct fill and stroke colors -->
-        <use href="#leaf" transform="translate(0,20) rotate(0 200 200)" fill="#FFB3BA" stroke="#CC8F97"/>
-        <use href="#leaf" transform="translate(0,20) rotate(90 200 200)" fill="#BAE1FF" stroke="#8AA0CC"/>
-        <use href="#leaf" transform="translate(0,20) rotate(180 200 200)" fill="#BAFFC9" stroke="#8AC0A0"/>
-        <use href="#leaf" transform="translate(0,20) rotate(270 200 200)" fill="#FFFFBA" stroke="#CCCC97"/>
+        <use href="#leaf"
+             transform="rotate(0)"
+             fill="#FFB3BA" stroke="#CC8F97"/>
+        <use href="#leaf"
+             transform="rotate(90) "
+             fill="#BAE1FF" stroke="#8AA0CC"/>
+        <use href="#leaf"
+             transform="rotate(180)"
+             fill="#BAFFC9" stroke="#8AC0A0"/>
+        <use href="#leaf"
+             transform="rotate(270) "
+             fill="#FFFFBA" stroke="#CCCC97"/>
         <!-- continuous rotation -->
+        <!--
         <animateTransform attributeName="transform"
                           type="rotate"
-                          from="0 200 200"
-                          to="360 200 200"
+                          from="0"
+                          to="360"
                           dur="10s"
-                          repeatCount="indefinite"/>
+                          repeatCount="1"/>
+                          -->
     </g>
 </svg>
