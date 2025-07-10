@@ -19,9 +19,9 @@
             />
             <!-- Y shape at bottom tip, inheriting stroke from use -->
             <g stroke-linecap="round" stroke-linejoin="round" stroke-width="1">
-                <line x1="12" y1="21.35" x2="12" y2="16" />
-                <line x1="12" y1="16" x2="8" y2="12" />
-                <line x1="12" y1="16" x2="16" y2="12" />
+                <line x1="12" y1="21.35" x2="12" y2="14" />
+                <line x1="12" y1="14" x2="8" y2="10" />
+                <line x1="12" y1="14" x2="16" y2="10" />
             </g>
         </symbol>
     </defs>
