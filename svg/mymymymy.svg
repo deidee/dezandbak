@@ -28,6 +28,13 @@
 
     <!-- Four hearts forming a clover, tips touching at center with random pastel colors -->
     <g>
+        <!-- animated rotation of whole clover -->
+        <animateTransform attributeName="transform"
+                          type="rotate"
+                          from="0 24 24"
+                          to="360 24 24"
+                          dur="10s"
+                          repeatCount="indefinite"/>
         <use href="#heart" transform="translate(24 24) rotate(0) translate(-12 -21.35)" fill="#FFB3BA" stroke="#CC8F97" />
         <use href="#heart" transform="translate(24 24) rotate(90) translate(-12 -21.35)" fill="#BAE1FF" stroke="#8AA0CC" />
         <use href="#heart" transform="translate(24 24) rotate(180) translate(-12 -21.35)" fill="#BAFFC9" stroke="#8AC0A0" />
