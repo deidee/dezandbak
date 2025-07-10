@@ -26,7 +26,7 @@
         </symbol>
     </defs>
 
-    <!-- Four hearts forming a clover, tips touching at center with random pastel colors -->
+    <!-- Four hearts forming a clover, tips touching at center with distinct colors -->
     <g>
         <!-- animated rotation of whole clover -->
         <animateTransform attributeName="transform"
@@ -35,9 +35,9 @@
                           to="360 24 24"
                           dur="10s"
                           repeatCount="indefinite"/>
-        <use href="#heart" transform="translate(24 24) rotate(0) translate(-12 -21.35)" fill="#FFB3BA" stroke="#CC8F97" />
-        <use href="#heart" transform="translate(24 24) rotate(90) translate(-12 -21.35)" fill="#BAE1FF" stroke="#8AA0CC" />
-        <use href="#heart" transform="translate(24 24) rotate(180) translate(-12 -21.35)" fill="#BAFFC9" stroke="#8AC0A0" />
-        <use href="#heart" transform="translate(24 24) rotate(270) translate(-12 -21.35)" fill="#FFFFBA" stroke="#CCCC97" />
+        <use href="#heart" transform="translate(24 24) rotate(0) translate(-12 -21.85)" fill="#D2691E" stroke="#8B4513" />
+        <use href="#heart" transform="translate(24 24) rotate(90) translate(-12 -21.85)" fill="#FFD700" stroke="#B8860B" />
+        <use href="#heart" transform="translate(24 24) rotate(180) translate(-12 -21.85)" fill="#FF0800" stroke="#B22222" />
+        <use href="#heart" transform="translate(24 24) rotate(270) translate(-12 -21.85)" fill="#40E0D0" stroke="#20B2AA" />
     </g>
 </svg>
