@@ -1,34 +1,36 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="480" height="480">
     <defs>
-        <style>
-            * {
-            transform-box: fill-box;
-            transform-origin: bottom center;
-            }
-        </style>
-        <!-- define one leaf as a more voluptuous heart with inheriting stroke -->
-        <symbol id="leaf">
+        <!-- heart symbol definition without viewBox -->
+        <symbol id="heart">
             <path
-                    d="M200,120
-                   C200,30 400,30 200,220
-                   C0,30 200,30 200,120 Z"
-                    stroke-width="4"
-                    stroke-linejoin="round" stroke-linecap="round"/>
-            <g stroke-linecap="round">
-                <!-- Y stems inherit the stroke color from the use -->
-                <line x1="200" y1="220" x2="200" y2="170" stroke-width="6"/>
-                <line x1="200" y1="170" x2="160" y2="130" stroke-width="6"/>
-                <line x1="200" y1="170" x2="240" y2="130" stroke-width="6"/>
+                    d="M12 21.35
+           L10.55 20.03
+           C5.4 15.36 2 12.28 2 8.5
+           C2 5.42 4.42 3 7.5 3
+           C9.24 3 10.91 3.81 12 7
+           C13.09 3.81 14.76 3 16.5 3
+           C19.58 3 22 5.42 22 8.5
+           C22 12.28 18.6 15.36 13.45 20.03
+           L12 21.35
+           Z"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="1"
+            />
+            <!-- Y shape at bottom tip, inheriting stroke from use -->
+            <g stroke-linecap="round" stroke-linejoin="round" stroke-width="1">
+                <line x1="12" y1="21.35" x2="12" y2="16" />
+                <line x1="12" y1="16" x2="8" y2="12" />
+                <line x1="12" y1="16" x2="16" y2="12" />
             </g>
         </symbol>
     </defs>
 
-    <!-- group all leaves -->
-    <g id="clover">
-        <!-- Four leaves with distinct fill and stroke colors -->
-        <use href="#leaf" transform="rotate(0)" fill="#FFB3BA" stroke="#CC8F97"/>
-        <use href="#leaf" transform="rotate(90)" fill="#BAE1FF" stroke="#8AA0CC"/>
-        <use href="#leaf" transform="rotate(180)" fill="#BAFFC9" stroke="#8AC0A0"/>
-        <use href="#leaf" transform="rotate(270)" fill="#FFFFBA" stroke="#CCCC97"/>
+    <!-- Four hearts forming a clover, tips touching at center with random pastel colors -->
+    <g>
+        <use href="#heart" transform="translate(24 24) rotate(0) translate(-12 -21.35)" fill="#FFB3BA" stroke="#CC8F97" />
+        <use href="#heart" transform="translate(24 24) rotate(90) translate(-12 -21.35)" fill="#BAE1FF" stroke="#8AA0CC" />
+        <use href="#heart" transform="translate(24 24) rotate(180) translate(-12 -21.35)" fill="#BAFFC9" stroke="#8AC0A0" />
+        <use href="#heart" transform="translate(24 24) rotate(270) translate(-12 -21.35)" fill="#FFFFBA" stroke="#CCCC97" />
     </g>
 </svg>
