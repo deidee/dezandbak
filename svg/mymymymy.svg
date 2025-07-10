@@ -1,37 +1,29 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
     <defs>
-        <!-- shared pink-to-red gradient -->
-        <linearGradient id="grad" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stop-color="#FF99CC"/>
-            <stop offset="100%" stop-color="#FF3366"/>
-        </linearGradient>
-
-        <!-- define one leaf group as symbol -->
+        <!-- define one leaf as a symbol with inheriting stroke -->
         <symbol id="leaf">
-            <g>
-                <path
-                        d="M200,80
-                       C200,25 380,25 200,180
-                       C20,25  200,25 200,80 Z"
-                        fill="url(#grad)"
-                        stroke="#CC0044" stroke-width="4"
-                        stroke-linejoin="round" stroke-linecap="round"/>
-                <g stroke="#FFFFFF" stroke-width="6" stroke-linecap="round">
-                    <!-- Enlarged Y: longer stem and arms -->
-                    <line x1="200" y1="180" x2="200" y2="140"/>
-                    <line x1="200" y1="140" x2="170" y2="110"/>
-                    <line x1="200" y1="140" x2="230" y2="110"/>
-                </g>
+            <path
+                    d="M200,80
+                   C200,25 380,25 200,180
+                   C20,25  200,25 200,80 Z"
+                    stroke-width="4"
+                    stroke-linejoin="round" stroke-linecap="round"/>
+            <g stroke-linecap="round">
+                <!-- Y stems inherit the stroke color from the use -->
+                <line x1="200" y1="180" x2="200" y2="140" stroke-width="6"/>
+                <line x1="200" y1="140" x2="170" y2="110" stroke-width="6"/>
+                <line x1="200" y1="140" x2="230" y2="110" stroke-width="6"/>
             </g>
         </symbol>
     </defs>
 
     <!-- group all leaves and animate rotation around center -->
     <g id="clover">
-        <use href="#leaf" transform="translate(0,20) rotate(0 200 200)"/>
-        <use href="#leaf" transform="translate(0,20) rotate(90 200 200)"/>
-        <use href="#leaf" transform="translate(0,20) rotate(180 200 200)"/>
-        <use href="#leaf" transform="translate(0,20) rotate(270 200 200)"/>
+        <!-- Four leaves with distinct fill and stroke colors -->
+        <use href="#leaf" transform="translate(0,20) rotate(0 200 200)" fill="#FFB3BA" stroke="#CC8F97"/>
+        <use href="#leaf" transform="translate(0,20) rotate(90 200 200)" fill="#BAE1FF" stroke="#8AA0CC"/>
+        <use href="#leaf" transform="translate(0,20) rotate(180 200 200)" fill="#BAFFC9" stroke="#8AC0A0"/>
+        <use href="#leaf" transform="translate(0,20) rotate(270 200 200)" fill="#FFFFBA" stroke="#CCCC97"/>
         <!-- continuous rotation -->
         <animateTransform attributeName="transform"
                           type="rotate"
