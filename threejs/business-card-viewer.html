@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>3D Business Card — Real‑size with Drag Rotation</title>
+    <style>
+        :root {
+            --bg: #0b0d10;
+            --panel: #11151a;
+            --text: #e5e7eb;
+            --muted: #9aa3ad;
+            --accent: #3b82f6;
+        }
+        html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
+        .app { display: grid; grid-template-columns: 320px 1fr; height: 100%; }
+        .panel { background: var(--panel); border-right: 1px solid #1f2630; padding: 16px; overflow: auto; }
+        .panel h1 { font-size: 16px; margin: 0 0 12px; letter-spacing: .2px; }
+        .panel h2 { font-size: 12px; text-transform: uppercase; color: var(--muted); margin: 18px 0 8px; letter-spacing: .6px; }
+        .panel label { display:block; font-size:12px; color: var(--muted); margin: 8px 0 4px; }
+        .panel input[type="text"], .panel input[type="number"] {
+            width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: 8px; border: 1px solid #222a35; background: #0f1318; color: var(--text);
+        }
+        .row { display:flex; gap:8px; }
+        .row > * { flex:1; }
+        .panel .btn {
+            display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:10px 12px; margin-top:10px; background: var(--accent); color:white; border:0; border-radius:10px; font-weight:600; cursor:pointer;
+        }
+        .panel .subtle { background: #1c2430; color: #c9d2dd; }
+        .note { font-size: 12px; color: var(--muted); margin-top: 8px; }
+        .calibration {
+            margin: 10px 0 0; padding: 10px; border: 1px solid #1e2531; border-radius: 10px; background: #0f141a;
+        }
+        .ruler { width: 100%; height: 24px; position: relative; background: linear-gradient(90deg, #0b0f14, #0b0f14), repeating-linear-gradient(90deg, rgba(255,255,255,.14) 0 1px, transparent 1px 10px); border-radius: 8px; border:1px solid #1f2630; }
+        .ruler::after { content: attr(data-mm) " mm"; position:absolute; right:8px; top:3px; font-size:11px; color:#8b95a3; }
+
+        /* 3D viewport */
+        #viewport { position: relative; background: radial-gradient(1200px 800px at 50% 120%, rgba(59,130,246,.14), transparent), #0b0d10; }
+        canvas { display:block; width:100%; height:100%; }
+
+        /* helper overlay for exact-size preview */
+        .overlay-box { position:absolute; left:16px; bottom:16px; padding:8px 10px; border-radius:8px; background:rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.08); font-size:12px; color:#cbd5e1; }
+        .overlay-box code { color:#e5e7eb; }
+    </style>
+</head>
+<body>
+<div class="app">
+    <aside class="panel">
+        <h1>3D Business Card</h1>
+        <div class="note">Drag in the canvas to rotate. Defaults to EU size (85 × 55 mm). Replace the image URLs with your front/back PNGs.</div>
+
+        <h2>Images</h2>
+        <label>Front PNG URL</label>
+        <input id="frontUrl" type="text" placeholder="https://example.com/card-front.png" value="https://images.unsplash.com/photo-1545239351-1141bd82e8a6?q=80&w=1200&auto=format&fit=crop" />
+
+        <label>Back PNG URL</label>
+        <input id="backUrl" type="text" placeholder="https://example.com/card-back.png" value="https://images.unsplash.com/photo-1545239561-9f582c4cfb02?q=80&w=1200&auto=format&fit=crop" />
+
+        <button id="applyBtn" class="btn">Apply Images</button>
+
+        <h2>Dimensions</h2>
+        <div class="row">
+            <div>
+                <label>Width (mm)</label>
+                <input id="widthMM" type="number" value="85" step="0.1" />
+            </div>
+            <div>
+                <label>Height (mm)</label>
+                <input id="heightMM" type="number" value="55" step="0.1" />
+            </div>
+        </div>
+        <label>Thickness (mm)</label>
+        <input id="thickMM" type="number" value="0.3" step="0.05" />
+
+        <h2>Real‑size Calibration</h2>
+        <div class="calibration">
+            <label>Pixels per mm (screen scale)</label>
+            <input id="pxPerMM" type="number" value="3.7795" step="0.01" />
+            <div class="note">Browsers assume ~96&nbsp;DPI → 3.7795&nbsp;px/mm. Real monitors vary; adjust below until the ruler matches a physical mm ruler.</div>
+            <div id="ruler" class="ruler" data-mm="50"></div>
+            <button id="fitBtn" class="btn subtle">Fit view to real size</button>
+        </div>
+
+        <h2>View</h2>
+        <button id="snap2D" class="btn subtle">Snap to 2D Front</button>
+        <div class="note">Tip: you can still rotate after snapping.</div>
+    </aside>
+
+    <main id="viewport"></main>
+</div>
+
+<script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+      }
+    }
+</script>
+
+<!-- Three.js as ES modules -->
+<script type="module">
+    import * as THREE from "three";
+    import { OrbitControls } from 'https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js';
+
+    // === DOM ===
+    const els = {
+        viewport: document.getElementById('viewport'),
+        frontUrl: document.getElementById('frontUrl'),
+        backUrl: document.getElementById('backUrl'),
+        applyBtn: document.getElementById('applyBtn'),
+        widthMM: document.getElementById('widthMM'),
+        heightMM: document.getElementById('heightMM'),
+        thickMM: document.getElementById('thickMM'),
+        pxPerMM: document.getElementById('pxPerMM'),
+        ruler: document.getElementById('ruler'),
+        fitBtn: document.getElementById('fitBtn'),
+        snap2D: document.getElementById('snap2D'),
+    };
+
+    // === Renderer ===
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setClearColor(0x0b0d10, 1);
+    els.viewport.appendChild(renderer.domElement);
+
+    // === Scene & Camera (Orthographic for true-size mapping) ===
+    const scene = new THREE.Scene();
+
+    const ortho = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 1000);
+    ortho.position.set(0, 0, 200);
+    scene.add(ortho);
+
+    // === Lighting (subtle, paper-like) ===
+    scene.add(new THREE.AmbientLight(0xffffff, 0.85));
+    const key = new THREE.DirectionalLight(0xffffff, 0.7);
+    key.position.set(0.8, 1, 1.2);
+    scene.add(key);
+
+    // === Card Mesh ===
+    let cardMesh = null;
+    const loader = new THREE.TextureLoader();
+
+    function createCard({ widthMM, heightMM, thickMM, frontUrl, backUrl }) {
+        const w = widthMM; // world units == mm
+        const h = heightMM;
+        const d = thickMM;
+
+        const geo = new THREE.BoxGeometry(w, h, d);
+
+        // Load textures
+        const frontTex = loader.load(frontUrl);
+        const backTex  = loader.load(backUrl);
+        [frontTex, backTex].forEach(t => { t.anisotropy = 8; t.colorSpace = THREE.SRGBColorSpace; t.generateMipmaps = true; t.minFilter = THREE.LinearMipmapLinearFilter; });
+
+        // BoxMaterial order: +X, -X, +Y, -Y, +Z (front), -Z (back)
+        const sideMat = new THREE.MeshStandardMaterial({ color: 0xf5f5f0, roughness: 0.9, metalness: 0.0 });
+        const frontMat = new THREE.MeshStandardMaterial({ map: frontTex, roughness: 0.8, metalness: 0.0 });
+        const backMat  = new THREE.MeshStandardMaterial({ map: backTex,  roughness: 0.8, metalness: 0.0 });
+
+        const mats = [sideMat, sideMat, sideMat, sideMat, frontMat, backMat];
+
+        if (cardMesh) { scene.remove(cardMesh); cardMesh.geometry.dispose(); cardMesh.material.forEach?.(m => m.dispose?.()); }
+
+        cardMesh = new THREE.Mesh(geo, mats);
+        cardMesh.rotation.set(0, 0, 0);
+        scene.add(cardMesh);
+    }
+
+    // === Controls (drag to rotate, no zoom/pan) ===
+    const controls = new OrbitControls(ortho, renderer.domElement);
+    controls.enableZoom = false;
+    controls.enablePan = false;
+    controls.enableDamping = true;
+    controls.rotateSpeed = 0.8;
+    // Keep it feeling "2D" unless user drags: limit tilt a bit
+    controls.minPolarAngle = Math.PI/2 - 0.6; // look slightly down
+    controls.maxPolarAngle = Math.PI/2 + 0.6; // or up
+
+    // Snap to exact front view helper
+    function snapToFront() {
+        cardMesh?.rotation.set(0,0,0);
+        // OrbitControls target/orbit reset
+        controls.reset();
+        // Re-center camera
+        ortho.position.set(0,0,200);
+        controls.update();
+    }
+
+    // === Size & True-size fit ===
+    function resizeRenderer() {
+        const w = els.viewport.clientWidth;
+        const h = els.viewport.clientHeight;
+        renderer.setSize(w, h, false);
+        updateOrthoFrustum();
+    }
+
+    function updateOrthoFrustum() {
+        // Fit the orthographic camera so that "real-size" (mm) maps to pixels using pxPerMM
+        const pxPerMM = parseFloat(els.pxPerMM.value) || 3.7795;
+        const w = els.viewport.clientWidth;
+        const h = els.viewport.clientHeight;
+
+        // choose vertical framing based on current card height in world units
+        const cardH = parseFloat(els.heightMM.value) || 55;
+        const marginPx = 40; // small breathing room
+        const desiredPx = cardH * pxPerMM + marginPx * 2;
+
+        // world height that should be visible: cardH plus margins in world units
+        const worldHeight = (desiredPx / pxPerMM);
+        const worldWidth = worldHeight * (w / h);
+
+        ortho.left = -worldWidth/2;
+        ortho.right = worldWidth/2;
+        ortho.top = worldHeight/2;
+        ortho.bottom = -worldHeight/2;
+        ortho.updateProjectionMatrix();
+    }
+
+    // Update on calibration change: resize the demo ruler as a 50mm strip
+    function updateRuler() {
+        const mm = 50; // reference span
+        const pxPerMM = parseFloat(els.pxPerMM.value) || 3.7795;
+        els.ruler.style.backgroundSize = `${pxPerMM}px 100%`;
+        els.ruler.style.width = `${mm * pxPerMM}px`;
+        els.ruler.dataset.mm = String(mm);
+    }
+
+    // === Animation Loop ===
+    function tick() {
+        controls.update();
+        renderer.render(scene, ortho);
+        requestAnimationFrame(tick);
+    }
+
+    // === Hook up UI ===
+    function applyImagesAndDims() {
+        createCard({
+            widthMM:  parseFloat(els.widthMM.value)  || 85,
+            heightMM: parseFloat(els.heightMM.value) || 55,
+            thickMM:  parseFloat(els.thickMM.value)  || 0.3,
+            frontUrl: els.frontUrl.value.trim(),
+            backUrl:  els.backUrl.value.trim(),
+        });
+        updateOrthoFrustum();
+    }
+
+    els.applyBtn.addEventListener('click', applyImagesAndDims);
+    els.fitBtn.addEventListener('click', updateOrthoFrustum);
+    els.snap2D.addEventListener('click', snapToFront);
+    els.pxPerMM.addEventListener('input', () => { updateRuler(); updateOrthoFrustum(); });
+    ['widthMM','heightMM','thickMM'].forEach(id => els[id].addEventListener('input', () => { applyImagesAndDims(); }));
+
+    // Resize handling
+    new ResizeObserver(resizeRenderer).observe(els.viewport);
+    window.addEventListener('orientationchange', resizeRenderer);
+
+    // === Init ===
+    applyImagesAndDims();
+    updateRuler();
+    resizeRenderer();
+    requestAnimationFrame(tick);
+
+    // Overlay debug
+    const overlay = document.createElement('div');
+    overlay.className = 'overlay-box';
+    els.viewport.appendChild(overlay);
+    function updateOverlay() {
+        const pxPerMM = parseFloat(els.pxPerMM.value) || 3.7795;
+        const wmm = parseFloat(els.widthMM.value) || 85;
+        const hmm = parseFloat(els.heightMM.value) || 55;
+        overlay.innerHTML = `Scale: <code>${pxPerMM.toFixed(2)}</code> px/mm · Card: <code>${wmm}×${hmm}</code> mm`;
+    }
+    setInterval(updateOverlay, 250);
+
+</script>
+</body>
+</html>
