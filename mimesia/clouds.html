@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Procedural Cloud Animation</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #000;
+            height: 100%;
+            width: 100%;
+        }
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+<body>
+<canvas id="clouds"></canvas>
+
+<script>
+    // ======================
+    // Setup
+    // ======================
+    const canvas = document.getElementById('clouds');
+    const ctx = canvas.getContext('2d', { alpha: true });
+
+    // Low-res offscreen canvas for noise (scaled up for speed)
+    const offCanvas = document.createElement('canvas');
+    const offCtx = offCanvas.getContext('2d');
+
+    let lowW, lowH;
+    let imgData, data;
+
+    // Resize handler
+    function resize() {
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        canvas.width = w;
+        canvas.height = h;
+
+        // Low-res buffer (~40% of size, clamped)
+        const scale = 0.4;
+        lowW = Math.max(160, Math.min(Math.floor(w * scale), 512));
+        lowH = Math.max(90,  Math.min(Math.floor(h * scale), 512));
+
+        offCanvas.width = lowW;
+        offCanvas.height = lowH;
+        imgData = offCtx.createImageData(lowW, lowH);
+        data = imgData.data;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // ======================
+    // Simple value noise + FBM
+    // ======================
+    const NOISE_SIZE = 256;
+    const noise = new Float32Array(NOISE_SIZE * NOISE_SIZE);
+
+    // Fill with random values 0..1
+    for (let i = 0; i < noise.length; i++) {
+        noise[i] = Math.random();
+    }
+
+    function fade(t) {
+        // Smoothstep-ish curve
+        return t * t * (3 - 2 * t);
+    }
+
+    function sampleNoise(x, y) {
+        // Wrap coordinates for tiling
+        x = x % NOISE_SIZE; if (x < 0) x += NOISE_SIZE;
+        y = y % NOISE_SIZE; if (y < 0) y += NOISE_SIZE;
+
+        const x0 = Math.floor(x);
+        const y0 = Math.floor(y);
+        const x1 = (x0 + 1) % NOISE_SIZE;
+        const y1 = (y0 + 1) % NOISE_SIZE;
+
+        const fx = x - x0;
+        const fy = y - y0;
+
+        const sx = fade(fx);
+        const sy = fade(fy);
+
+        const i00 = y0 * NOISE_SIZE + x0;
+        const i10 = y0 * NOISE_SIZE + x1;
+        const i01 = y1 * NOISE_SIZE + x0;
+        const i11 = y1 * NOISE_SIZE + x1;
+
+        const n00 = noise[i00];
+        const n10 = noise[i10];
+        const n01 = noise[i01];
+        const n11 = noise[i11];
+
+        // Bilinear interpolation
+        const nx0 = n00 + sx * (n10 - n00);
+        const nx1 = n01 + sx * (n11 - n01);
+        return nx0 + sy * (nx1 - nx0); // 0..1
+    }
+
+    // Fractional Brownian motion (FBM) to get cloud-like patterns
+    function fbm(x, y) {
+        let value = 0;
+        let amplitude = 1;
+        let frequency = 1;
+        let ampSum = 0;
+
+        for (let i = 0; i < 4; i++) {
+            const n = sampleNoise(x * frequency, y * frequency) * 2 - 1; // -1..1
+            value += n * amplitude;
+            ampSum += amplitude;
+            amplitude *= 0.5;
+            frequency *= 2;
+        }
+        return value / ampSum; // roughly -1..1
+    }
+
+    // ======================
+    // Render loop
+    // ======================
+    function drawBackground() {
+        // Simple blue sky vertical gradient
+        const g = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        g.addColorStop(0.0, 'rgb(20, 40, 80)');
+        g.addColorStop(0.4, 'rgb(60, 110, 180)');
+        g.addColorStop(1.0, 'rgb(160, 210, 255)');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function render(time) {
+        const t = time * 0.00005; // animation speed (smaller = slower)
+
+        const w = lowW;
+        const h = lowH;
+        const threshold = 0.2;  // where clouds start (lower = puffier clouds)
+
+        // Build cloud alpha/brightness map in low-res buffer
+        let i = 0;
+        for (let y = 0; y < h; y++) {
+            const ny = y / h;
+            for (let x = 0; x < w; x++) {
+                const nx = x / w;
+
+                // Sample FBM with some aspect/stretching
+                const n = fbm(
+                    nx * 3.0 + t * 0.4,  // move horizontally
+                    ny * 2.0 + t * 0.1   // slight vertical drift
+                );
+
+                // Normalize to 0..1
+                let density = (n + 1) * 0.5;
+
+                // Make top of clouds brighter / more detailed
+                density = Math.pow(density, 1.4);
+
+                let alpha = 0;
+                let brightness = 255;
+
+                if (density > threshold) {
+                    const d = (density - threshold) / (1 - threshold); // 0..1
+                    const soft = Math.min(1, Math.max(0, d));
+
+                    alpha = soft * 255;
+
+                    // Clouds slightly gray, with depth
+                    const base = 210;
+                    const peak = 255;
+                    brightness = base + (peak - base) * soft;
+                }
+
+                data[i++] = brightness; // R
+                data[i++] = brightness; // G
+                data[i++] = brightness; // B
+                data[i++] = alpha;      // A
+            }
+        }
+
+        offCtx.putImageData(imgData, 0, 0);
+
+        // Draw sky + scaled cloud layer
+        drawBackground();
+        ctx.globalAlpha = 1;
+        ctx.drawImage(offCanvas, 0, 0, canvas.width, canvas.height);
+
+        requestAnimationFrame(render);
+    }
+
+    requestAnimationFrame(render);
+</script>
+</body>
+</html>
