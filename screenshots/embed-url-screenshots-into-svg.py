@@ -3,21 +3,17 @@
 """
 mockup-from-url.py
 
-Features:
-- If URL is provided: process that one URL.
-- If URL is omitted: read ./domains.txt (same directory as this script),
-  treat each non-empty non-comment line as a domain, and process all of them.
-- Takes 3 screenshots (desktop/tablet/mobile) + a 1080×1080 "instagram" screenshot.
-  Default scrolls: top top top (desktop/tablet/mobile). Instagram also defaults to top.
-- Embeds the 3 device screenshots into an SVG mockup (never crops width).
-- Uses meta[name="theme-color"] as background color for the mockup SVG (and Instagram composite).
-- Exports:
-  - dist/mockup-{domain}.svg
-  - dist/instagram-{domain}.png            (1080×1080 composite with centered mockup)
-  - dist/screens/desktop-{domain}-{scroll}.png
-  - dist/screens/tablet-{domain}-{scroll}.png
-  - dist/screens/mobile-{domain}-{scroll}.png
-  - dist/screens/instagram-{domain}-{scroll}.png   (1080×1080 page screenshot)
+Adds:
+- dist/instagram-full-{domain}.png
+  A 1080×1080 square containing a "full page" screenshot (entire scroll height),
+  scaled to fit within the square with ~128px margin around it, centered.
+  Background uses meta theme-color if present, else a light grey.
+
+Still generates:
+- dist/mockup-{domain}.svg
+- dist/instagram-{domain}.png (mockup composite)
+- dist/screens/{device}-{domain}-{scroll}.png (desktop/tablet/mobile)
+- dist/screens/instagram-{domain}-{scroll}.png (1080×1080 viewport page screenshot)
 
 Install:
   pip install playwright pillow
@@ -30,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import math
 import re
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -38,7 +35,6 @@ from urllib.parse import urlparse
 from PIL import Image
 
 # ---- SVG template (cleaned + with SCREEN_* ids) ----
-
 DEFAULT_TEMPLATE_SVG = """\
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2520 1530">
   <defs>
@@ -79,11 +75,10 @@ DEFAULT_TEMPLATE_SVG = """\
 </svg>
 """
 
-# Screen rectangles for embedding (id, x, y, w, h)
 SCREENS: List[Tuple[str, float, float, float, float]] = [
-    ("SCREEN_L", 408.518, 533.504, 480.0, 270.0),  # desktop-ish
-    ("SCREEN_M", 263.643, 687.362, 167.0, 222.0),  # tablet-ish
-    ("SCREEN_S", 252.143, 805.219,  60.0, 106.0),  # mobile-ish
+    ("SCREEN_L", 408.518, 533.504, 480.0, 270.0),
+    ("SCREEN_M", 263.643, 687.362, 167.0, 222.0),
+    ("SCREEN_S", 252.143, 805.219,  60.0, 106.0),
 ]
 
 COMMON_VIEWPORTS = {
@@ -97,7 +92,7 @@ FALLBACK_SCALE_HINTS = {"desktop": 3.2252, "tablet": 3.2252, "mobile": 3.99062}
 SCROLL_PRESETS: Dict[str, float] = {"top": 0.0, "mid": 0.5, "middle": 0.5, "bottom": 1.0}
 
 
-# ---- XML Pretty ----
+# ---- Helpers ----
 
 def pretty_xml(xml_bytes: bytes) -> str:
     try:
@@ -110,7 +105,14 @@ def pretty_xml(xml_bytes: bytes) -> str:
         return dom.toprettyxml(indent="  ")
 
 
-# ---- Domain / URL handling ----
+def normalize_to_url(domain_or_url: str) -> str:
+    s = domain_or_url.strip()
+    if not s:
+        return ""
+    if "://" not in s:
+        return "https://" + s
+    return s
+
 
 def sanitize_domain_from_url(url: str) -> str:
     netloc = urlparse(url).netloc or "site"
@@ -122,32 +124,10 @@ def sanitize_domain_from_url(url: str) -> str:
     return netloc or "site"
 
 
-def normalize_to_url(domain_or_url: str) -> str:
-    """
-    Accepts:
-      - example.com
-      - https://example.com
-      - http://example.com
-    Returns a URL. Defaults to https:// if scheme missing.
-    """
-    s = domain_or_url.strip()
-    if not s:
-        return ""
-    if "://" not in s:
-        return "https://" + s
-    return s
-
-
 def read_domains_txt(script_path: Path) -> List[str]:
-    """
-    Reads domains.txt in the same directory as the script.
-    Each non-empty line is a domain or URL.
-    Lines starting with # are ignored.
-    """
     domains_path = script_path.parent / "domains.txt"
     if not domains_path.exists():
         raise SystemExit(f"No URL provided and '{domains_path}' not found.")
-
     lines = domains_path.read_text(encoding="utf-8").splitlines()
     items: List[str] = []
     for line in lines:
@@ -160,8 +140,6 @@ def read_domains_txt(script_path: Path) -> List[str]:
     return items
 
 
-# ---- Viewport logic ----
-
 def scroll_frac(name: str) -> float:
     key = (name or "").strip().lower()
     if key not in SCROLL_PRESETS:
@@ -173,11 +151,8 @@ def choose_viewport(kind: str, rect_w: float, rect_h: float) -> Tuple[int, int]:
     rect_ar = rect_w / rect_h
     cw, ch = COMMON_VIEWPORTS[kind]
     common_ar = cw / ch
-
-    # Only use common sizes if aspect ratio is close enough
     if abs(common_ar - rect_ar) <= 0.10:
         return cw, ch
-
     scale = FALLBACK_SCALE_HINTS[kind]
     fw = max(FALLBACK_MIN[0], int(round(rect_w * scale)))
     fh = max(FALLBACK_MIN[1], int(round(rect_h * scale)))
@@ -191,7 +166,7 @@ def rel_href(img_path: Path, svg_path: Path) -> str:
         return img_path.as_posix()
 
 
-# ---- Screenshot capture ----
+# ---- Screenshots ----
 
 def take_screenshots(
     url: str,
@@ -201,19 +176,12 @@ def take_screenshots(
     instagram_scroll: str,
 ) -> Tuple[List[Path], Path, Optional[str]]:
     """
-    Creates:
-      dist/screens/desktop-{domain}-{scroll}.png
-      dist/screens/tablet-{domain}-{scroll}.png
-      dist/screens/mobile-{domain}-{scroll}.png
-      dist/screens/instagram-{domain}-{scroll}.png  (1080x1080)
-
     Returns:
-      (device_shots[3], instagram_shot, theme_color)
+      (device_shots[3], instagram_1080_viewport_shot, theme_color)
     """
     from playwright.sync_api import sync_playwright  # type: ignore
 
     screens_dir.mkdir(parents=True, exist_ok=True)
-
     kinds = ["desktop", "tablet", "mobile"]
     if len(scrolls_3) != 3:
         raise SystemExit("--scrolls must provide exactly 3 values.")
@@ -242,7 +210,6 @@ def take_screenshots(
             "() => Math.max(document.body.scrollHeight, document.documentElement.scrollHeight)"
         )
 
-        # 3 device screenshots
         device_paths: List[Path] = []
         for kind, (_sid, _x, _y, w, h), scroll_name in zip(kinds, SCREENS, scrolls_3):
             vp_w, vp_h = choose_viewport(kind, w, h)
@@ -257,7 +224,7 @@ def take_screenshots(
             page.screenshot(path=str(out_path), full_page=False)
             device_paths.append(out_path)
 
-        # 1080×1080 instagram page screenshot
+        # 1080×1080 instagram viewport screenshot
         page.set_viewport_size({"width": 1080, "height": 1080})
         frac = scroll_frac(instagram_scroll)
         max_scroll = max(0, int(scroll_height) - 1080)
@@ -273,16 +240,48 @@ def take_screenshots(
     return device_paths, insta_path, theme_color
 
 
-# ---- Embed device screenshots into SVG (no width cropping) ----
+def take_fullpage_screenshot(url: str, tmp_path: Path) -> Tuple[Path, Optional[str]]:
+    """
+    Takes a full-page screenshot to tmp_path and returns (path, theme_color).
+    """
+    from playwright.sync_api import sync_playwright  # type: ignore
+
+    tmp_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        ctx = browser.new_context(device_scale_factor=2)
+        page = ctx.new_page()
+
+        # Use a sensible desktop width; height doesn't matter with full_page=True
+        page.set_viewport_size({"width": 1200, "height": 800})
+        page.goto(url, wait_until="networkidle", timeout=60_000)
+
+        theme_color = None
+        try:
+            val = page.evaluate(
+                """() => {
+                  const m = document.querySelector('meta[name="theme-color"]');
+                  return m ? (m.getAttribute('content') || '').trim() : '';
+                }"""
+            )
+            if isinstance(val, str) and val.strip():
+                theme_color = val.strip()
+        except Exception:
+            theme_color = None
+
+        page.wait_for_timeout(250)
+        page.screenshot(path=str(tmp_path), full_page=True)
+
+        ctx.close()
+        browser.close()
+
+    return tmp_path, theme_color
+
+
+# ---- SVG embedding ----
 
 def embed_into_svg(template_svg: str, out_svg: Path, images: List[Path], theme_color: Optional[str]) -> None:
-    """
-    Replaces SCREEN_L/M/S with a clipped <g> containing:
-    - a white rect background
-    - an <image> sized so WIDTH exactly matches the screen width (never crops width)
-      and vertically centered; clipPath may crop height.
-    """
-    # Parse SVG
     try:
         from lxml import etree as ET  # type: ignore
         parser = ET.XMLParser(remove_blank_text=True)
@@ -299,7 +298,6 @@ def embed_into_svg(template_svg: str, out_svg: Path, images: List[Path], theme_c
             return f"{{{ns}}}{tag}"
         return tag
 
-    # Find or create defs
     defs = None
     for child in list(root):
         if child.tag.endswith("defs"):
@@ -313,7 +311,6 @@ def embed_into_svg(template_svg: str, out_svg: Path, images: List[Path], theme_c
             defs = ET.Element(q("defs"))
         root.insert(0, defs)
 
-    # Insert background rect if theme_color exists
     if theme_color:
         bg = root.makeelement(q("rect")) if is_lxml else __import__("xml.etree.ElementTree").Element(q("rect"))  # type: ignore
         bg.set("x", "0")
@@ -329,7 +326,6 @@ def embed_into_svg(template_svg: str, out_svg: Path, images: List[Path], theme_c
         except Exception:
             root.insert(0, bg)
 
-    # Parent finder for xml.etree
     def find_parent_et(root_node, child):
         for p in root_node.iter():
             for c in list(p):
@@ -341,7 +337,6 @@ def embed_into_svg(template_svg: str, out_svg: Path, images: List[Path], theme_c
     id_to_img = dict(zip(screen_ids, images))
 
     for screen_id, x, y, w, h in SCREENS:
-        # Find target element by id
         target = None
         for node in root.iter():
             if node.get("id") == screen_id:
@@ -350,7 +345,6 @@ def embed_into_svg(template_svg: str, out_svg: Path, images: List[Path], theme_c
         if target is None:
             raise SystemExit(f"Could not find element with id='{screen_id}' in the SVG template.")
 
-        # Create clipPath
         clip_id = f"clip_{screen_id}"
         clip = defs.makeelement(q("clipPath")) if is_lxml else __import__("xml.etree.ElementTree").Element(q("clipPath"))  # type: ignore
         clip.set("id", clip_id)
@@ -364,7 +358,6 @@ def embed_into_svg(template_svg: str, out_svg: Path, images: List[Path], theme_c
         clip.append(clip_rect)
         defs.append(clip)
 
-        # Compute image placement: match width exactly, center vertically
         img_path = id_to_img[screen_id]
         with Image.open(img_path) as im:
             iw, ih = im.size
@@ -372,7 +365,6 @@ def embed_into_svg(template_svg: str, out_svg: Path, images: List[Path], theme_c
         scaled_h = ih * scale
         y_img = y + (h - scaled_h) / 2.0
 
-        # Create group
         if is_lxml:
             parent = target.getparent()  # type: ignore
             g = parent.makeelement(q("g"))  # type: ignore
@@ -385,7 +377,6 @@ def embed_into_svg(template_svg: str, out_svg: Path, images: List[Path], theme_c
 
         g.set("clip-path", f"url(#{clip_id})")
 
-        # White backdrop
         backdrop = g.makeelement(q("rect")) if is_lxml else __import__("xml.etree.ElementTree").Element(q("rect"))  # type: ignore
         backdrop.set("x", f"{x}")
         backdrop.set("y", f"{y}")
@@ -394,7 +385,6 @@ def embed_into_svg(template_svg: str, out_svg: Path, images: List[Path], theme_c
         backdrop.set("fill", "#fff")
         g.append(backdrop)
 
-        # Image
         img_el = g.makeelement(q("image")) if is_lxml else __import__("xml.etree.ElementTree").Element(q("image"))  # type: ignore
         img_el.set("href", rel_href(img_path, out_svg))
         img_el.set("x", f"{x}")
@@ -404,7 +394,6 @@ def embed_into_svg(template_svg: str, out_svg: Path, images: List[Path], theme_c
         img_el.set("preserveAspectRatio", "xMidYMid meet")
         g.append(img_el)
 
-        # Replace target with group
         if is_lxml:
             idx = parent.index(target)  # type: ignore
             parent.remove(target)        # type: ignore
@@ -415,7 +404,6 @@ def embed_into_svg(template_svg: str, out_svg: Path, images: List[Path], theme_c
             parent.remove(target)    # type: ignore
             parent.insert(idx, g)    # type: ignore
 
-    # Write output SVG
     if is_lxml:
         from lxml import etree as ET  # type: ignore
         xml_bytes = ET.tostring(root, encoding="utf-8", xml_declaration=False)
@@ -426,13 +414,9 @@ def embed_into_svg(template_svg: str, out_svg: Path, images: List[Path], theme_c
     out_svg.write_text(pretty_xml(xml_bytes), encoding="utf-8")
 
 
-# ---- Inline images for reliable SVG rendering in <img> ----
+# ---- Inline images inside SVG for reliable rendering in <img> ----
 
 def inline_svg_images(svg_in: Path, svg_out: Path) -> None:
-    """
-    Rewrites <image href="..."> inside the SVG to data: URIs for local raster images.
-    This avoids Chromium blocking external resources when SVG is embedded as <img>.
-    """
     svg_in = svg_in.resolve()
     base_dir = svg_in.parent
 
@@ -488,22 +472,15 @@ def inline_svg_images(svg_in: Path, svg_out: Path) -> None:
         svg_out.write_bytes(ET.tostring(root, encoding="utf-8"))
 
 
-# ---- Render 1080×1080 composite PNG ----
+# ---- Render 1080×1080 composite PNG (mockup) ----
 
 def render_instagram_composite(svg_path: Path, out_png: Path, theme_color: Optional[str]) -> None:
-    """
-    Creates dist/instagram-{domain}.png:
-    - 1080×1080 square
-    - theme-color background (or white)
-    - centered mockup SVG (with screenshots visible via inlined SVG)
-    """
     from playwright.sync_api import sync_playwright  # type: ignore
 
     bg = theme_color or "#ffffff"
     svg_path = svg_path.resolve()
     out_png = out_png.resolve()
 
-    # Inline images into a temp SVG so screenshots render reliably.
     inlined_svg = out_png.parent / f"_inlined-{svg_path.name}"
     inline_svg_images(svg_path, inlined_svg)
 
@@ -556,7 +533,6 @@ def render_instagram_composite(svg_path: Path, out_png: Path, theme_color: Optio
         ctx.close()
         browser.close()
 
-    # Cleanup temp files
     for tmp in (html_path, inlined_svg):
         try:
             tmp.unlink()
@@ -564,16 +540,57 @@ def render_instagram_composite(svg_path: Path, out_png: Path, theme_color: Optio
             pass
 
 
-# ---- Per-domain pipeline ----
+# ---- Render 1080×1080 square with FULL PAGE screenshot inside ----
 
-def process_one(url: str, out_dir: Path, template_svg: str, scrolls: List[str], insta_scroll: str) -> None:
-    url = normalize_to_url(url)
+def render_instagram_fullpage_square(
+    fullpage_png: Path,
+    out_png: Path,
+    background_color: str,
+    margin_px: int = 128,
+) -> None:
+    """
+    Creates a 1080×1080 square:
+      - background_color fill
+      - places fullpage_png inside, scaled to fit within (1080 - 2*margin) both dims
+      - centered
+    """
+    S = 1080
+    inner = S - 2 * margin_px
+    out_png.parent.mkdir(parents=True, exist_ok=True)
+
+    with Image.open(fullpage_png) as im:
+        im = im.convert("RGBA")
+        iw, ih = im.size
+
+        scale = min(inner / iw, inner / ih)
+        nw = max(1, int(round(iw * scale)))
+        nh = max(1, int(round(ih * scale)))
+        resample = getattr(getattr(Image, "Resampling", Image), "LANCZOS", Image.LANCZOS)
+        im_resized = im.resize((nw, nh), resample=resample)
+
+
+    # Background
+    bg = Image.new("RGBA", (S, S), background_color)
+    x = (S - nw) // 2
+    y = (S - nh) // 2
+    bg.alpha_composite(im_resized, (x, y))
+
+    # Save as RGB PNG (Instagram friendly)
+    bg.convert("RGB").save(out_png, format="PNG")
+
+
+# ---- Pipeline per domain ----
+
+def process_one(url_or_domain: str, out_dir: Path, template_svg: str, scrolls: List[str], insta_scroll: str) -> None:
+    url = normalize_to_url(url_or_domain)
     domain = sanitize_domain_from_url(url)
 
     screens_dir = out_dir / "screens"
     out_svg = out_dir / f"mockup-{domain}.svg"
-    out_insta_composite = out_dir / f"instagram-{domain}.png"
+    out_insta_mockup = out_dir / f"instagram-{domain}.png"
+    out_insta_full = out_dir / f"instagram-full-{domain}.png"
 
+    # 1) Device + instagram viewport screenshots + theme-color
     device_shots, insta_shot, theme_color = take_screenshots(
         url=url,
         screens_dir=screens_dir,
@@ -582,15 +599,31 @@ def process_one(url: str, out_dir: Path, template_svg: str, scrolls: List[str], 
         instagram_scroll=insta_scroll,
     )
 
+    # 2) SVG mockup + instagram mockup composite
     embed_into_svg(template_svg, out_svg, device_shots, theme_color)
-    render_instagram_composite(out_svg, out_insta_composite, theme_color)
+    render_instagram_composite(out_svg, out_insta_mockup, theme_color)
 
-    # Print summary
+    # 3) Full page screenshot -> instagram-full square
+    tmp_full = screens_dir / f"_fullpage-{domain}.png"
+    full_path, theme2 = take_fullpage_screenshot(url, tmp_full)
+
+    # Use theme color if found (prefer the earlier one), otherwise light grey.
+    bg = theme_color or theme2 or "#e6e6e6"
+    render_instagram_fullpage_square(full_path, out_insta_full, bg, margin_px=128)
+
+    # Optional cleanup of the huge fullpage temp screenshot
+    try:
+        tmp_full.unlink()
+    except Exception:
+        pass
+
+    # Summary
     print(f"\n== {domain} ==")
     print(f"URL: {url}")
-    print(f"Theme color: {theme_color or '(none found)'}")
+    print(f"Theme color: {theme_color or theme2 or '(none found)'}")
     print(f"SVG: {out_svg}")
-    print(f"Instagram composite: {out_insta_composite}")
+    print(f"Instagram mockup: {out_insta_mockup}")
+    print(f"Instagram full:  {out_insta_full}")
     print("Screens:")
     for p in device_shots:
         print(f"  - {p}")
@@ -612,7 +645,7 @@ def main() -> None:
     ap.add_argument(
         "--instagram-scroll",
         default="top",
-        help="Scroll preset for the 1080×1080 instagram screenshot (default: top)",
+        help="Scroll preset for the 1080×1080 instagram viewport screenshot (default: top)",
     )
     args = ap.parse_args()
 
@@ -621,7 +654,6 @@ def main() -> None:
 
     template_svg = DEFAULT_TEMPLATE_SVG if not args.template else Path(args.template).read_text(encoding="utf-8")
 
-    # Determine workload
     script_path = Path(__file__).resolve()
     items = [args.url] if args.url.strip() else read_domains_txt(script_path)
 
