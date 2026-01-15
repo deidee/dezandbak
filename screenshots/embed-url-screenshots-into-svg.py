@@ -168,6 +168,69 @@ def rel_href(img_path: Path, svg_path: Path) -> str:
 
 # ---- Screenshots ----
 
+def wait_for_render_complete(page, timeout_ms: int = 15_000) -> None:
+    """
+    Best-effort wait until the page is visually ready:
+    - document ready
+    - fonts loaded
+    - current DOM images loaded
+    - layout stable (scrollHeight stops changing briefly)
+    Works even on pages that never become "networkidle".
+    """
+    # DOM readiness
+    page.wait_for_load_state("domcontentloaded", timeout=timeout_ms)
+    try:
+        page.wait_for_load_state("networkidle", timeout=5_000)
+    except Exception:
+        pass
+
+    try:
+        page.wait_for_function("document.readyState === 'complete'", timeout=timeout_ms)
+    except Exception:
+        pass
+
+    # Fonts (if supported)
+    try:
+        page.wait_for_function(
+            "() => !document.fonts || document.fonts.status === 'loaded'",
+            timeout=timeout_ms,
+        )
+    except Exception:
+        pass
+
+    # Images currently in DOM (won't force-load offscreen lazy images)
+    try:
+        page.wait_for_function(
+            """() => {
+              const imgs = Array.from(document.images || []);
+              if (imgs.length === 0) return true;
+              return imgs.every(img => img.complete && img.naturalWidth > 0);
+            }""",
+            timeout=timeout_ms,
+        )
+    except Exception:
+        pass
+
+    # Layout settle: scrollHeight stable for ~1s
+    try:
+        stable_needed = 4
+        stable = 0
+        last_h = None
+        for _ in range(20):  # 20 * 250ms = 5s max
+            h = page.evaluate(
+                "() => Math.max(document.body.scrollHeight, document.documentElement.scrollHeight)"
+            )
+            if last_h is not None and h == last_h:
+                stable += 1
+                if stable >= stable_needed:
+                    break
+            else:
+                stable = 0
+                last_h = h
+            wait_for_render_complete(page)
+    except Exception:
+        pass
+
 def take_screenshots(
     url: str,
     screens_dir: Path,
@@ -191,7 +254,8 @@ def take_screenshots(
         ctx = browser.new_context(device_scale_factor=2)
         page = ctx.new_page()
 
-        page.goto(url, wait_until="networkidle", timeout=60_000)
+        page.goto(url, wait_until="domcontentloaded", timeout=60_000)
+        wait_for_render_complete(page)
 
         theme_color = None
         try:
@@ -218,7 +282,7 @@ def take_screenshots(
             frac = scroll_frac(scroll_name)
             max_scroll = max(0, int(scroll_height) - vp_h)
             page.evaluate("(y) => window.scrollTo(0, y)", int(round(max_scroll * frac)))
-            page.wait_for_timeout(250)
+            wait_for_render_complete(page)
 
             out_path = screens_dir / f"{kind}-{domain}-{scroll_name}.png"
             page.screenshot(path=str(out_path), full_page=False)
@@ -229,7 +293,7 @@ def take_screenshots(
         frac = scroll_frac(instagram_scroll)
         max_scroll = max(0, int(scroll_height) - 1080)
         page.evaluate("(y) => window.scrollTo(0, y)", int(round(max_scroll * frac)))
-        page.wait_for_timeout(250)
+        wait_for_render_complete(page)
 
         insta_path = screens_dir / f"instagram-{domain}-{instagram_scroll}.png"
         page.screenshot(path=str(insta_path), full_page=False)
@@ -270,7 +334,7 @@ def take_fullpage_screenshot(url: str, tmp_path: Path) -> Tuple[Path, Optional[s
         except Exception:
             theme_color = None
 
-        page.wait_for_timeout(250)
+        wait_for_render_complete(page)
         page.screenshot(path=str(tmp_path), full_page=True)
 
         ctx.close()
@@ -528,7 +592,7 @@ def render_instagram_composite(svg_path: Path, out_png: Path, theme_color: Optio
         ctx = browser.new_context(viewport={"width": 1080, "height": 1080}, device_scale_factor=2)
         page = ctx.new_page()
         page.goto(html_path.resolve().as_uri(), wait_until="load")
-        page.wait_for_timeout(300)
+        wait_for_render_complete(page)
         page.screenshot(path=str(out_png), full_page=False)
         ctx.close()
         browser.close()
