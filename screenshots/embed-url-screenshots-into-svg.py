@@ -3,22 +3,24 @@
 """
 mockup-from-url.py
 
-Adds:
-- dist/instagram-full-{domain}.png
-  A 1080×1080 square containing a "full page" screenshot (entire scroll height),
-  scaled to fit within the square with ~128px margin around it, centered.
-  Background uses meta theme-color if present, else a light grey.
-
-Still generates:
-- dist/mockup-{domain}.svg
-- dist/instagram-{domain}.png (mockup composite)
-- dist/screens/{device}-{domain}-{scroll}.png (desktop/tablet/mobile)
-- dist/screens/instagram-{domain}-{scroll}.png (1080×1080 viewport page screenshot)
+What it does (per domain):
+- Takes screenshots after the page is actually "visually ready" (not just networkidle):
+  waits for DOM ready, fonts, in-DOM images, and a brief "layout stable" window.
+  Also re-waits after each scroll (for lazy-loaded assets).
+- Generates:
+  - dist/mockup-{domain}.svg
+  - dist/instagram-{domain}.png                 (1080×1080 mockup composite)
+  - dist/instagram-full-{domain}.png            (1080×1080, full page shrunk + 128px margin)
+  - dist/screens/desktop-{domain}-{scroll}.png
+  - dist/screens/tablet-{domain}-{scroll}.png
+  - dist/screens/mobile-{domain}-{scroll}.png
+  - dist/screens/instagram-{domain}-{scroll}.png (1080×1080 viewport page screenshot)
+- If no URL arg is passed, reads domains from domains.txt (next to this script)
 
 Install:
   pip install playwright pillow
   playwright install chromium
-Optional:
+Optional (pretty SVG output):
   pip install lxml
 """
 
@@ -26,15 +28,17 @@ from __future__ import annotations
 
 import argparse
 import base64
-import math
 import re
+import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from urllib.parse import urlparse
 
 from PIL import Image
 
+
 # ---- SVG template (cleaned + with SCREEN_* ids) ----
+
 DEFAULT_TEMPLATE_SVG = """\
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2520 1530">
   <defs>
@@ -166,70 +170,83 @@ def rel_href(img_path: Path, svg_path: Path) -> str:
         return img_path.as_posix()
 
 
-# ---- Screenshots ----
+def lanczos_resample():
+    # Pillow compat: Image.Resampling.LANCZOS (new) or Image.LANCZOS (old)
+    return getattr(getattr(Image, "Resampling", Image), "LANCZOS", Image.LANCZOS)
 
-def wait_for_render_complete(page, timeout_ms: int = 15_000) -> None:
+
+# ---- Waiting logic (fast + bounded; avoids "grinding to a halt") ----
+
+def wait_for_render_complete(page, timeout_ms: int = 12_000) -> None:
     """
-    Best-effort wait until the page is visually ready:
-    - document ready
-    - fonts loaded
-    - current DOM images loaded
-    - layout stable (scrollHeight stops changing briefly)
-    Works even on pages that never become "networkidle".
+    Bounded best-effort wait until page is reasonably "ready" visually.
+    IMPORTANT: This is capped and won't loop forever.
     """
-    # DOM readiness
-    page.wait_for_load_state("domcontentloaded", timeout=timeout_ms)
+    t0 = time.time()
+
+    def remaining() -> int:
+        left = timeout_ms - int((time.time() - t0) * 1000)
+        return max(250, left)
+
+    # DOM + a quick networkidle try (many pages never truly idle)
     try:
-        page.wait_for_load_state("networkidle", timeout=5_000)
+        page.wait_for_load_state("domcontentloaded", timeout=min(4000, remaining()))
+    except Exception:
+        pass
+    try:
+        page.wait_for_load_state("networkidle", timeout=min(2500, remaining()))
     except Exception:
         pass
 
+    # readyState complete (often enough)
     try:
-        page.wait_for_function("document.readyState === 'complete'", timeout=timeout_ms)
+        page.wait_for_function("document.readyState === 'complete'", timeout=min(4000, remaining()))
     except Exception:
         pass
 
-    # Fonts (if supported)
+    # Fonts (don't block too long)
     try:
         page.wait_for_function(
             "() => !document.fonts || document.fonts.status === 'loaded'",
-            timeout=timeout_ms,
+            timeout=min(2500, remaining()),
         )
     except Exception:
         pass
 
-    # Images currently in DOM (won't force-load offscreen lazy images)
+    # Images in current DOM (bounded)
     try:
         page.wait_for_function(
             """() => {
               const imgs = Array.from(document.images || []);
               if (imgs.length === 0) return true;
-              return imgs.every(img => img.complete && img.naturalWidth > 0);
+              return imgs.every(img => img.complete);
             }""",
-            timeout=timeout_ms,
+            timeout=min(2500, remaining()),
         )
     except Exception:
         pass
 
-    # Layout settle: scrollHeight stable for ~1s
+    # Layout settle: short, bounded (max ~1.5s)
     try:
-        stable_needed = 4
-        stable = 0
         last_h = None
-        for _ in range(20):  # 20 * 250ms = 5s max
+        stable = 0
+        for _ in range(6):  # 6 * 250ms = 1.5s max
             h = page.evaluate(
                 "() => Math.max(document.body.scrollHeight, document.documentElement.scrollHeight)"
             )
             if last_h is not None and h == last_h:
                 stable += 1
-                if stable >= stable_needed:
+                if stable >= 2:  # stable for 2 ticks (~500ms)
                     break
             else:
                 stable = 0
                 last_h = h
-            wait_for_render_complete(page)
+            page.wait_for_timeout(250)
     except Exception:
         pass
+
+
+# ---- Screenshots ----
 
 def take_screenshots(
     url: str,
@@ -257,6 +274,7 @@ def take_screenshots(
         page.goto(url, wait_until="domcontentloaded", timeout=60_000)
         wait_for_render_complete(page)
 
+        # theme-color (after initial render)
         theme_color = None
         try:
             val = page.evaluate(
@@ -270,6 +288,7 @@ def take_screenshots(
         except Exception:
             theme_color = None
 
+        # compute scroll height late (after layout settles)
         scroll_height = page.evaluate(
             "() => Math.max(document.body.scrollHeight, document.documentElement.scrollHeight)"
         )
@@ -278,11 +297,12 @@ def take_screenshots(
         for kind, (_sid, _x, _y, w, h), scroll_name in zip(kinds, SCREENS, scrolls_3):
             vp_w, vp_h = choose_viewport(kind, w, h)
             page.set_viewport_size({"width": vp_w, "height": vp_h})
+            wait_for_render_complete(page, timeout_ms=6000)
 
             frac = scroll_frac(scroll_name)
             max_scroll = max(0, int(scroll_height) - vp_h)
             page.evaluate("(y) => window.scrollTo(0, y)", int(round(max_scroll * frac)))
-            wait_for_render_complete(page)
+            wait_for_render_complete(page, timeout_ms=8000)
 
             out_path = screens_dir / f"{kind}-{domain}-{scroll_name}.png"
             page.screenshot(path=str(out_path), full_page=False)
@@ -290,10 +310,12 @@ def take_screenshots(
 
         # 1080×1080 instagram viewport screenshot
         page.set_viewport_size({"width": 1080, "height": 1080})
+        wait_for_render_complete(page, timeout_ms=6000)
+
         frac = scroll_frac(instagram_scroll)
         max_scroll = max(0, int(scroll_height) - 1080)
         page.evaluate("(y) => window.scrollTo(0, y)", int(round(max_scroll * frac)))
-        wait_for_render_complete(page)
+        wait_for_render_complete(page, timeout_ms=8000)
 
         insta_path = screens_dir / f"instagram-{domain}-{instagram_scroll}.png"
         page.screenshot(path=str(insta_path), full_page=False)
@@ -317,9 +339,9 @@ def take_fullpage_screenshot(url: str, tmp_path: Path) -> Tuple[Path, Optional[s
         ctx = browser.new_context(device_scale_factor=2)
         page = ctx.new_page()
 
-        # Use a sensible desktop width; height doesn't matter with full_page=True
         page.set_viewport_size({"width": 1200, "height": 800})
-        page.goto(url, wait_until="networkidle", timeout=60_000)
+        page.goto(url, wait_until="domcontentloaded", timeout=60_000)
+        wait_for_render_complete(page, timeout_ms=12_000)
 
         theme_color = None
         try:
@@ -334,7 +356,6 @@ def take_fullpage_screenshot(url: str, tmp_path: Path) -> Tuple[Path, Optional[s
         except Exception:
             theme_color = None
 
-        wait_for_render_complete(page)
         page.screenshot(path=str(tmp_path), full_page=True)
 
         ctx.close()
@@ -592,7 +613,7 @@ def render_instagram_composite(svg_path: Path, out_png: Path, theme_color: Optio
         ctx = browser.new_context(viewport={"width": 1080, "height": 1080}, device_scale_factor=2)
         page = ctx.new_page()
         page.goto(html_path.resolve().as_uri(), wait_until="load")
-        wait_for_render_complete(page)
+        page.wait_for_timeout(300)
         page.screenshot(path=str(out_png), full_page=False)
         ctx.close()
         browser.close()
@@ -612,12 +633,6 @@ def render_instagram_fullpage_square(
     background_color: str,
     margin_px: int = 128,
 ) -> None:
-    """
-    Creates a 1080×1080 square:
-      - background_color fill
-      - places fullpage_png inside, scaled to fit within (1080 - 2*margin) both dims
-      - centered
-    """
     S = 1080
     inner = S - 2 * margin_px
     out_png.parent.mkdir(parents=True, exist_ok=True)
@@ -629,17 +644,12 @@ def render_instagram_fullpage_square(
         scale = min(inner / iw, inner / ih)
         nw = max(1, int(round(iw * scale)))
         nh = max(1, int(round(ih * scale)))
-        resample = getattr(getattr(Image, "Resampling", Image), "LANCZOS", Image.LANCZOS)
-        im_resized = im.resize((nw, nh), resample=resample)
+        im_resized = im.resize((nw, nh), resample=lanczos_resample())
 
-
-    # Background
     bg = Image.new("RGBA", (S, S), background_color)
     x = (S - nw) // 2
     y = (S - nh) // 2
     bg.alpha_composite(im_resized, (x, y))
-
-    # Save as RGB PNG (Instagram friendly)
     bg.convert("RGB").save(out_png, format="PNG")
 
 
@@ -654,7 +664,6 @@ def process_one(url_or_domain: str, out_dir: Path, template_svg: str, scrolls: L
     out_insta_mockup = out_dir / f"instagram-{domain}.png"
     out_insta_full = out_dir / f"instagram-full-{domain}.png"
 
-    # 1) Device + instagram viewport screenshots + theme-color
     device_shots, insta_shot, theme_color = take_screenshots(
         url=url,
         screens_dir=screens_dir,
@@ -663,25 +672,19 @@ def process_one(url_or_domain: str, out_dir: Path, template_svg: str, scrolls: L
         instagram_scroll=insta_scroll,
     )
 
-    # 2) SVG mockup + instagram mockup composite
     embed_into_svg(template_svg, out_svg, device_shots, theme_color)
     render_instagram_composite(out_svg, out_insta_mockup, theme_color)
 
-    # 3) Full page screenshot -> instagram-full square
     tmp_full = screens_dir / f"_fullpage-{domain}.png"
     full_path, theme2 = take_fullpage_screenshot(url, tmp_full)
-
-    # Use theme color if found (prefer the earlier one), otherwise light grey.
     bg = theme_color or theme2 or "#e6e6e6"
     render_instagram_fullpage_square(full_path, out_insta_full, bg, margin_px=128)
 
-    # Optional cleanup of the huge fullpage temp screenshot
     try:
         tmp_full.unlink()
     except Exception:
         pass
 
-    # Summary
     print(f"\n== {domain} ==")
     print(f"URL: {url}")
     print(f"Theme color: {theme_color or theme2 or '(none found)'}")
