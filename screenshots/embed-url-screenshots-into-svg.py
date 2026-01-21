@@ -3,19 +3,27 @@
 """
 mockup-from-url.py
 
-What it does (per domain):
-- Takes screenshots after the page is actually "visually ready" (not just networkidle):
-  waits for DOM ready, fonts, in-DOM images, and a brief "layout stable" window.
-  Also re-waits after each scroll (for lazy-loaded assets).
-- Generates:
-  - dist/mockup-{domain}.svg
-  - dist/instagram-{domain}.png                 (1080×1080 mockup composite)
-  - dist/instagram-full-{domain}.png            (1080×1080, full page shrunk + 128px margin)
-  - dist/screens/desktop-{domain}-{scroll}.png
-  - dist/screens/tablet-{domain}-{scroll}.png
-  - dist/screens/mobile-{domain}-{scroll}.png
-  - dist/screens/instagram-{domain}-{scroll}.png (1080×1080 viewport page screenshot)
-- If no URL arg is passed, reads domains from domains.txt (next to this script)
+Changes in this version:
+- Removed the “smart wait” logic; uses simple, oldschool timeouts instead.
+- Output paths changed:
+    dist/instagram/{domain}-mockup.png          (was dist/instagram-{domain}.png)
+    dist/instagram/{domain}-full.png            (was dist/instagram-full-{domain}.png)
+    dist/instagram/{domain}-{scroll}.png        (was dist/screens/instagram-{domain}-{scroll}.png)
+- Adds:
+    dist/instagram/{domain}-icon.png
+  If the page has <link rel="apple-touch-icon-precomposed"> or <link rel="apple-touch-icon">,
+  we download it, then create a 1080×1080 square. If the icon is larger than 1080 it’s scaled down.
+  If it’s smaller, it’s centered on a theme-color background (or light grey fallback).
+
+Still generates:
+- dist/mockup-{domain}.svg
+- dist/screens/desktop-{domain}-{scroll}.png
+- dist/screens/tablet-{domain}-{scroll}.png
+- dist/screens/mobile-{domain}-{scroll}.png
+- dist/instagram/{domain}-mockup.png
+- dist/instagram/{domain}-full.png
+- dist/instagram/{domain}-{scroll}.png
+- dist/instagram/{domain}-icon.png (if icon found)
 
 Install:
   pip install playwright pillow
@@ -29,10 +37,9 @@ from __future__ import annotations
 import argparse
 import base64
 import re
-import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
 
 from PIL import Image
 
@@ -171,97 +178,72 @@ def rel_href(img_path: Path, svg_path: Path) -> str:
 
 
 def lanczos_resample():
-    # Pillow compat: Image.Resampling.LANCZOS (new) or Image.LANCZOS (old)
     return getattr(getattr(Image, "Resampling", Image), "LANCZOS", Image.LANCZOS)
 
 
-# ---- Waiting logic (fast + bounded; avoids "grinding to a halt") ----
-
-def wait_for_render_complete(page, timeout_ms: int = 12_000) -> None:
-    """
-    Bounded best-effort wait until page is reasonably "ready" visually.
-    IMPORTANT: This is capped and won't loop forever.
-    """
-    t0 = time.time()
-
-    def remaining() -> int:
-        left = timeout_ms - int((time.time() - t0) * 1000)
-        return max(250, left)
-
-    # DOM + a quick networkidle try (many pages never truly idle)
+def get_theme_color(page) -> Optional[str]:
     try:
-        page.wait_for_load_state("domcontentloaded", timeout=min(4000, remaining()))
-    except Exception:
-        pass
-    try:
-        page.wait_for_load_state("networkidle", timeout=min(2500, remaining()))
-    except Exception:
-        pass
-
-    # readyState complete (often enough)
-    try:
-        page.wait_for_function("document.readyState === 'complete'", timeout=min(4000, remaining()))
-    except Exception:
-        pass
-
-    # Fonts (don't block too long)
-    try:
-        page.wait_for_function(
-            "() => !document.fonts || document.fonts.status === 'loaded'",
-            timeout=min(2500, remaining()),
-        )
-    except Exception:
-        pass
-
-    # Images in current DOM (bounded)
-    try:
-        page.wait_for_function(
+        val = page.evaluate(
             """() => {
-              const imgs = Array.from(document.images || []);
-              if (imgs.length === 0) return true;
-              return imgs.every(img => img.complete);
-            }""",
-            timeout=min(2500, remaining()),
+              const m = document.querySelector('meta[name="theme-color"]');
+              return m ? (m.getAttribute('content') || '').trim() : '';
+            }"""
         )
+        if isinstance(val, str) and val.strip():
+            return val.strip()
     except Exception:
         pass
+    return None
 
-    # Layout settle: short, bounded (max ~1.5s)
+
+def get_apple_touch_icon_url(page, base_url: str) -> Optional[str]:
+    """
+    Returns absolute URL for apple-touch-icon-precomposed or apple-touch-icon if present.
+    """
     try:
-        last_h = None
-        stable = 0
-        for _ in range(6):  # 6 * 250ms = 1.5s max
-            h = page.evaluate(
-                "() => Math.max(document.body.scrollHeight, document.documentElement.scrollHeight)"
-            )
-            if last_h is not None and h == last_h:
-                stable += 1
-                if stable >= 2:  # stable for 2 ticks (~500ms)
-                    break
-            else:
-                stable = 0
-                last_h = h
-            page.wait_for_timeout(250)
+        href = page.evaluate(
+            """() => {
+              const pre = document.querySelector('link[rel="apple-touch-icon-precomposed"]');
+              const plain = document.querySelector('link[rel="apple-touch-icon"]');
+              const el = pre || plain;
+              if (!el) return '';
+              return (el.getAttribute('href') || '').trim();
+            }"""
+        )
+        if isinstance(href, str) and href.strip():
+            return urljoin(base_url, href.strip())
     except Exception:
         pass
+    return None
 
 
-# ---- Screenshots ----
+# ---- Screenshots (simple timeouts) ----
 
 def take_screenshots(
     url: str,
     screens_dir: Path,
+    instagram_dir: Path,
     domain: str,
     scrolls_3: List[str],
     instagram_scroll: str,
-) -> Tuple[List[Path], Path, Optional[str]]:
+    load_wait_ms: int = 2500,
+    scroll_wait_ms: int = 1200,
+) -> Tuple[List[Path], Path, Optional[str], Optional[str]]:
     """
+    Creates:
+      dist/screens/desktop-{domain}-{scroll}.png
+      dist/screens/tablet-{domain}-{scroll}.png
+      dist/screens/mobile-{domain}-{scroll}.png
+      dist/instagram/{domain}-{scroll}.png   (1080×1080 viewport)
+
     Returns:
-      (device_shots[3], instagram_1080_viewport_shot, theme_color)
+      (device_paths[3], insta_1080_path, theme_color, apple_icon_url)
     """
     from playwright.sync_api import sync_playwright  # type: ignore
 
     screens_dir.mkdir(parents=True, exist_ok=True)
+    instagram_dir.mkdir(parents=True, exist_ok=True)
+
     kinds = ["desktop", "tablet", "mobile"]
     if len(scrolls_3) != 3:
         raise SystemExit("--scrolls must provide exactly 3 values.")
@@ -272,23 +254,11 @@ def take_screenshots(
         page = ctx.new_page()
 
         page.goto(url, wait_until="domcontentloaded", timeout=60_000)
-        wait_for_render_complete(page)
+        page.wait_for_timeout(load_wait_ms)
 
-        # theme-color (after initial render)
-        theme_color = None
-        try:
-            val = page.evaluate(
-                """() => {
-                  const m = document.querySelector('meta[name="theme-color"]');
-                  return m ? (m.getAttribute('content') || '').trim() : '';
-                }"""
-            )
-            if isinstance(val, str) and val.strip():
-                theme_color = val.strip()
-        except Exception:
-            theme_color = None
+        theme_color = get_theme_color(page)
+        apple_icon_url = get_apple_touch_icon_url(page, url)
 
-        # compute scroll height late (after layout settles)
         scroll_height = page.evaluate(
             "() => Math.max(document.body.scrollHeight, document.documentElement.scrollHeight)"
         )
@@ -297,12 +267,12 @@ def take_screenshots(
         for kind, (_sid, _x, _y, w, h), scroll_name in zip(kinds, SCREENS, scrolls_3):
             vp_w, vp_h = choose_viewport(kind, w, h)
             page.set_viewport_size({"width": vp_w, "height": vp_h})
-            wait_for_render_complete(page, timeout_ms=6000)
+            page.wait_for_timeout(250)
 
             frac = scroll_frac(scroll_name)
             max_scroll = max(0, int(scroll_height) - vp_h)
             page.evaluate("(y) => window.scrollTo(0, y)", int(round(max_scroll * frac)))
-            wait_for_render_complete(page, timeout_ms=8000)
+            page.wait_for_timeout(scroll_wait_ms)
 
             out_path = screens_dir / f"{kind}-{domain}-{scroll_name}.png"
             page.screenshot(path=str(out_path), full_page=False)
@@ -310,25 +280,30 @@ def take_screenshots(
 
         # 1080×1080 instagram viewport screenshot
         page.set_viewport_size({"width": 1080, "height": 1080})
-        wait_for_render_complete(page, timeout_ms=6000)
+        page.wait_for_timeout(250)
 
         frac = scroll_frac(instagram_scroll)
         max_scroll = max(0, int(scroll_height) - 1080)
         page.evaluate("(y) => window.scrollTo(0, y)", int(round(max_scroll * frac)))
-        wait_for_render_complete(page, timeout_ms=8000)
+        page.wait_for_timeout(scroll_wait_ms)
 
-        insta_path = screens_dir / f"instagram-{domain}-{instagram_scroll}.png"
+        insta_path = instagram_dir / f"{domain}-{instagram_scroll}.png"
         page.screenshot(path=str(insta_path), full_page=False)
 
         ctx.close()
         browser.close()
 
-    return device_paths, insta_path, theme_color
+    return device_paths, insta_path, theme_color, apple_icon_url
 
 
-def take_fullpage_screenshot(url: str, tmp_path: Path) -> Tuple[Path, Optional[str]]:
+def take_fullpage_screenshot(
+    url: str,
+    tmp_path: Path,
+    load_wait_ms: int = 2500,
+) -> Tuple[Path, Optional[str], Optional[str]]:
     """
-    Takes a full-page screenshot to tmp_path and returns (path, theme_color).
+    Takes a full-page screenshot to tmp_path and returns:
+      (path, theme_color, apple_icon_url)
     """
     from playwright.sync_api import sync_playwright  # type: ignore
 
@@ -341,27 +316,17 @@ def take_fullpage_screenshot(url: str, tmp_path: Path) -> Tuple[Path, Optional[s
 
         page.set_viewport_size({"width": 1200, "height": 800})
         page.goto(url, wait_until="domcontentloaded", timeout=60_000)
-        wait_for_render_complete(page, timeout_ms=12_000)
+        page.wait_for_timeout(load_wait_ms)
 
-        theme_color = None
-        try:
-            val = page.evaluate(
-                """() => {
-                  const m = document.querySelector('meta[name="theme-color"]');
-                  return m ? (m.getAttribute('content') || '').trim() : '';
-                }"""
-            )
-            if isinstance(val, str) and val.strip():
-                theme_color = val.strip()
-        except Exception:
-            theme_color = None
+        theme_color = get_theme_color(page)
+        apple_icon_url = get_apple_touch_icon_url(page, url)
 
         page.screenshot(path=str(tmp_path), full_page=True)
 
         ctx.close()
         browser.close()
 
-    return tmp_path, theme_color
+    return tmp_path, theme_color, apple_icon_url
 
 
 # ---- SVG embedding ----
@@ -565,6 +530,7 @@ def render_instagram_composite(svg_path: Path, out_png: Path, theme_color: Optio
     bg = theme_color or "#ffffff"
     svg_path = svg_path.resolve()
     out_png = out_png.resolve()
+    out_png.parent.mkdir(parents=True, exist_ok=True)
 
     inlined_svg = out_png.parent / f"_inlined-{svg_path.name}"
     inline_svg_images(svg_path, inlined_svg)
@@ -613,7 +579,7 @@ def render_instagram_composite(svg_path: Path, out_png: Path, theme_color: Optio
         ctx = browser.new_context(viewport={"width": 1080, "height": 1080}, device_scale_factor=2)
         page = ctx.new_page()
         page.goto(html_path.resolve().as_uri(), wait_until="load")
-        page.wait_for_timeout(300)
+        page.wait_for_timeout(400)
         page.screenshot(path=str(out_png), full_page=False)
         ctx.close()
         browser.close()
@@ -640,7 +606,6 @@ def render_instagram_fullpage_square(
     with Image.open(fullpage_png) as im:
         im = im.convert("RGBA")
         iw, ih = im.size
-
         scale = min(inner / iw, inner / ih)
         nw = max(1, int(round(iw * scale)))
         nh = max(1, int(round(ih * scale)))
@@ -653,6 +618,66 @@ def render_instagram_fullpage_square(
     bg.convert("RGB").save(out_png, format="PNG")
 
 
+# ---- Render 1080×1080 icon square ----
+
+def render_instagram_icon_square(
+    icon_bytes: bytes,
+    out_png: Path,
+    background_color: str,
+) -> None:
+    """
+    Creates dist/instagram/{domain}-icon.png:
+    - 1080×1080 square
+    - background_color fill
+    - icon centered
+    - if icon is larger than 1080 in either dimension: scale down to fit 1080×1080
+    - if smaller: keep size, just center
+    """
+    S = 1080
+    out_png.parent.mkdir(parents=True, exist_ok=True)
+
+    from io import BytesIO
+    with Image.open(BytesIO(icon_bytes)) as im:
+        im = im.convert("RGBA")
+        iw, ih = im.size
+
+        # Scale down if needed (never scale up)
+        scale = min(1.0, S / iw, S / ih)
+        nw = max(1, int(round(iw * scale)))
+        nh = max(1, int(round(ih * scale)))
+        if (nw, nh) != (iw, ih):
+            im = im.resize((nw, nh), resample=lanczos_resample())
+
+    bg = Image.new("RGBA", (S, S), background_color)
+    x = (S - nw) // 2
+    y = (S - nh) // 2
+    bg.alpha_composite(im, (x, y))
+    bg.convert("RGB").save(out_png, format="PNG")
+
+
+def download_bytes_via_playwright(url: str, timeout_ms: int = 20_000) -> Optional[bytes]:
+    """
+    Downloads a resource using Playwright's APIRequestContext (no extra deps).
+    Returns bytes or None.
+    """
+    from playwright.sync_api import sync_playwright  # type: ignore
+
+    with sync_playwright() as p:
+        req = p.request.new_context()
+        try:
+            resp = req.get(url, timeout=timeout_ms)
+            if resp.ok:
+                return resp.body()
+        except Exception:
+            return None
+        finally:
+            try:
+                req.dispose()
+            except Exception:
+                pass
+    return None
+
+
 # ---- Pipeline per domain ----
 
 def process_one(url_or_domain: str, out_dir: Path, template_svg: str, scrolls: List[str], insta_scroll: str) -> None:
@@ -660,41 +685,66 @@ def process_one(url_or_domain: str, out_dir: Path, template_svg: str, scrolls: L
     domain = sanitize_domain_from_url(url)
 
     screens_dir = out_dir / "screens"
-    out_svg = out_dir / f"mockup-{domain}.svg"
-    out_insta_mockup = out_dir / f"instagram-{domain}.png"
-    out_insta_full = out_dir / f"instagram-full-{domain}.png"
+    instagram_dir = out_dir / "instagram"
+    instagram_dir.mkdir(parents=True, exist_ok=True)
 
-    device_shots, insta_shot, theme_color = take_screenshots(
+    out_svg = out_dir / f"mockup-{domain}.svg"
+    out_insta_mockup = instagram_dir / f"{domain}-mockup.png"
+    out_insta_full = instagram_dir / f"{domain}-full.png"
+    out_insta_icon = instagram_dir / f"{domain}-icon.png"
+
+    # 1) Device + instagram viewport screenshots + theme-color + icon url
+    device_shots, insta_viewport_path, theme_color, icon_url1 = take_screenshots(
         url=url,
         screens_dir=screens_dir,
+        instagram_dir=instagram_dir,
         domain=domain,
         scrolls_3=scrolls,
         instagram_scroll=insta_scroll,
     )
 
+    # 2) SVG mockup + instagram mockup composite
     embed_into_svg(template_svg, out_svg, device_shots, theme_color)
     render_instagram_composite(out_svg, out_insta_mockup, theme_color)
 
+    # 3) Full page screenshot -> instagram full square
     tmp_full = screens_dir / f"_fullpage-{domain}.png"
-    full_path, theme2 = take_fullpage_screenshot(url, tmp_full)
+    full_path, theme2, icon_url2 = take_fullpage_screenshot(url, tmp_full)
     bg = theme_color or theme2 or "#e6e6e6"
     render_instagram_fullpage_square(full_path, out_insta_full, bg, margin_px=128)
 
+    # 4) Icon square (if possible)
+    icon_url = icon_url1 or icon_url2
+    if icon_url:
+        data = download_bytes_via_playwright(icon_url)
+        if data:
+            try:
+                render_instagram_icon_square(data, out_insta_icon, bg)
+            except Exception as e:
+                print(f"  - icon found but failed to render: {e}")
+        else:
+            print("  - icon URL found but download failed")
+
+    # Cleanup fullpage temp
     try:
         tmp_full.unlink()
     except Exception:
         pass
 
+    # Summary
     print(f"\n== {domain} ==")
     print(f"URL: {url}")
     print(f"Theme color: {theme_color or theme2 or '(none found)'}")
     print(f"SVG: {out_svg}")
-    print(f"Instagram mockup: {out_insta_mockup}")
-    print(f"Instagram full:  {out_insta_full}")
+    print("Outputs:")
+    print(f"  - {out_insta_mockup}")
+    print(f"  - {out_insta_full}")
+    print(f"  - {insta_viewport_path}")
+    if icon_url and out_insta_icon.exists():
+        print(f"  - {out_insta_icon}")
     print("Screens:")
     for p in device_shots:
         print(f"  - {p}")
-    print(f"  - {insta_shot}")
 
 
 def main() -> None:
@@ -714,6 +764,18 @@ def main() -> None:
         default="top",
         help="Scroll preset for the 1080×1080 instagram viewport screenshot (default: top)",
     )
+    ap.add_argument(
+        "--load-wait-ms",
+        type=int,
+        default=2500,
+        help="Initial wait after page load (default: 2500ms)",
+    )
+    ap.add_argument(
+        "--scroll-wait-ms",
+        type=int,
+        default=1200,
+        help="Wait after each scroll before screenshot (default: 1200ms)",
+    )
     args = ap.parse_args()
 
     out_dir = Path(args.out)
@@ -724,9 +786,80 @@ def main() -> None:
     script_path = Path(__file__).resolve()
     items = [args.url] if args.url.strip() else read_domains_txt(script_path)
 
+    # Patch timing values into functions by wrapping process_one
+    def run_one(item: str) -> None:
+        # Reuse args waits by temporarily overriding defaults in take_screenshots/take_fullpage via kwargs
+        # (keeps changes minimal & avoids global state)
+        nonlocal out_dir, template_svg
+        url = normalize_to_url(item)
+        domain = sanitize_domain_from_url(url)
+
+        screens_dir = out_dir / "screens"
+        instagram_dir = out_dir / "instagram"
+        instagram_dir.mkdir(parents=True, exist_ok=True)
+
+        out_svg = out_dir / f"mockup-{domain}.svg"
+        out_insta_mockup = instagram_dir / f"{domain}-mockup.png"
+        out_insta_full = instagram_dir / f"{domain}-full.png"
+        out_insta_icon = instagram_dir / f"{domain}-icon.png"
+
+        device_shots, insta_viewport_path, theme_color, icon_url1 = take_screenshots(
+            url=url,
+            screens_dir=screens_dir,
+            instagram_dir=instagram_dir,
+            domain=domain,
+            scrolls_3=args.scrolls,
+            instagram_scroll=args.instagram_scroll,
+            load_wait_ms=args.load_wait_ms,
+            scroll_wait_ms=args.scroll_wait_ms,
+        )
+
+        embed_into_svg(template_svg, out_svg, device_shots, theme_color)
+        render_instagram_composite(out_svg, out_insta_mockup, theme_color)
+
+        tmp_full = screens_dir / f"_fullpage-{domain}.png"
+        full_path, theme2, icon_url2 = take_fullpage_screenshot(
+            url=url,
+            tmp_path=tmp_full,
+            load_wait_ms=args.load_wait_ms,
+        )
+
+        bg = theme_color or theme2 or "#e6e6e6"
+        render_instagram_fullpage_square(full_path, out_insta_full, bg, margin_px=128)
+
+        icon_url = icon_url1 or icon_url2
+        if icon_url:
+            data = download_bytes_via_playwright(icon_url)
+            if data:
+                try:
+                    render_instagram_icon_square(data, out_insta_icon, bg)
+                except Exception as e:
+                    print(f"  - icon found but failed to render: {e}")
+            else:
+                print("  - icon URL found but download failed")
+
+        try:
+            tmp_full.unlink()
+        except Exception:
+            pass
+
+        print(f"\n== {domain} ==")
+        print(f"URL: {url}")
+        print(f"Theme color: {theme_color or theme2 or '(none found)'}")
+        print("Outputs:")
+        print(f"  - {out_svg}")
+        print(f"  - {out_insta_mockup}")
+        print(f"  - {out_insta_full}")
+        print(f"  - {insta_viewport_path}")
+        if icon_url and out_insta_icon.exists():
+            print(f"  - {out_insta_icon}")
+        print("Screens:")
+        for p in device_shots:
+            print(f"  - {p}")
+
     for item in items:
         try:
-            process_one(item, out_dir, template_svg, args.scrolls, args.instagram_scroll)
+            run_one(item)
         except Exception as e:
             print(f"\n!! Failed for '{item}': {e}")
 
