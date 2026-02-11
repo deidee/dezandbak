@@ -646,6 +646,15 @@ def take_fullpage_screenshot(url: str, tmp_path: Path, load_wait_ms: int = 2500)
         theme_color = get_theme_color(page)
         apple_icon_url = get_apple_touch_icon_url(page, url)
 
+        page.evaluate("""() => {
+          document.querySelectorAll('img[decoding="async"]').forEach(img => img.decoding = "sync");
+        }""")
+
+        page.evaluate("""() => Promise.allSettled(
+          Array.from(document.images).map(img => img.decode ? img.decode().catch(()=>{}) : Promise.resolve())
+        )""")
+        page.wait_for_timeout(2000)
+
         page.screenshot(path=str(tmp_path), full_page=True)
 
         ctx.close()
