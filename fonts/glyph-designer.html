@@ -1,0 +1,1453 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>PortMask Grid Typeface Editor</title>
+    <style>
+        :root{
+            --bg:#f5f6fa;
+            --panel:#ffffff;
+            --panel-2:#f8f9fc;
+            --text:#111318;
+            --muted:#5f6470;
+            --line:#d7dbe5;
+            --line-2:#c8ceda;
+            --accent:#4f46e5;
+            --accent-2:#ec4899;
+            --danger:#ea580c;
+            --ok:#16a34a;
+            --track:#111318;
+            --port-fill:#fff;
+            --port-stroke:#8f97a7;
+            --cell-fill:#fbfbfd;
+            --cell-active:#eef2ff;
+            --shadow:0 8px 28px rgba(17,19,24,.08);
+            --radius:14px;
+            --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+            --sans: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        }
+
+        [data-theme="dark"]{
+            --bg:#0f1116;
+            --panel:#171a21;
+            --panel-2:#11141b;
+            --text:#eef1f7;
+            --muted:#a6afbf;
+            --line:#2a3040;
+            --line-2:#3a4459;
+            --accent:#8b83ff;
+            --accent-2:#ff69b4;
+            --danger:#fb923c;
+            --ok:#34d399;
+            --track:#f2f5fb;
+            --port-fill:#10131a;
+            --port-stroke:#76819a;
+            --cell-fill:#151923;
+            --cell-active:#1f2440;
+            --shadow:0 10px 28px rgba(0,0,0,.35);
+        }
+
+        @media (prefers-color-scheme: dark){
+            [data-theme="auto"]{
+                --bg:#0f1116;
+                --panel:#171a21;
+                --panel-2:#11141b;
+                --text:#eef1f7;
+                --muted:#a6afbf;
+                --line:#2a3040;
+                --line-2:#3a4459;
+                --accent:#8b83ff;
+                --accent-2:#ff69b4;
+                --danger:#fb923c;
+                --ok:#34d399;
+                --track:#f2f5fb;
+                --port-fill:#10131a;
+                --port-stroke:#76819a;
+                --cell-fill:#151923;
+                --cell-active:#1f2440;
+                --shadow:0 10px 28px rgba(0,0,0,.35);
+            }
+        }
+
+        *{box-sizing:border-box}
+        html,body{height:100%}
+        body{
+            margin:0;
+            background:var(--bg);
+            color:var(--text);
+            font-family:var(--sans);
+        }
+
+        .app{
+            display:grid;
+            grid-template-columns: 360px 1fr 420px;
+            gap:14px;
+            padding:14px;
+            min-height:100vh;
+        }
+
+        .panel{
+            background:var(--panel);
+            border:1px solid var(--line);
+            border-radius:var(--radius);
+            box-shadow:var(--shadow);
+            overflow:hidden;
+            min-width:0;
+        }
+
+        .panel h2{
+            margin:0;
+            font-size:15px;
+            line-height:1;
+            padding:14px 14px 12px;
+            border-bottom:1px solid var(--line);
+            background:linear-gradient(to bottom, rgba(127,127,127,.06), transparent);
+        }
+
+        .panel-body{
+            padding:12px;
+        }
+
+        .stack{display:grid; gap:10px}
+        .row{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+        .row > *{min-width:0}
+        .grow{flex:1}
+        .muted{color:var(--muted)}
+        .tiny{font-size:12px}
+        .small{font-size:13px}
+
+        label{
+            font-size:12px;
+            color:var(--muted);
+            display:block;
+            margin-bottom:4px;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select,
+        textarea{
+            width:100%;
+            border:1px solid var(--line-2);
+            background:var(--panel-2);
+            color:var(--text);
+            border-radius:10px;
+            padding:8px 10px;
+            font:inherit;
+        }
+
+        input[type="range"]{ width:100% }
+
+        textarea{
+            min-height:96px;
+            resize:vertical;
+            font-family:var(--mono);
+            font-size:12px;
+            line-height:1.35;
+        }
+
+        .codebox textarea{ min-height:136px; }
+        .codebox svg{
+            display:block;
+            width:100%;
+            height:auto;
+            background:var(--panel-2);
+            border:1px solid var(--line);
+            border-radius:10px;
+        }
+
+        button{
+            border:1px solid var(--line-2);
+            background:var(--panel-2);
+            color:var(--text);
+            border-radius:10px;
+            padding:8px 10px;
+            font:inherit;
+            cursor:pointer;
+        }
+        button:hover{ border-color:var(--accent); }
+        button.primary{
+            background:color-mix(in srgb, var(--accent) 14%, var(--panel-2));
+            border-color:color-mix(in srgb, var(--accent) 50%, var(--line-2));
+        }
+        button.danger{
+            background:color-mix(in srgb, var(--danger) 12%, var(--panel-2));
+            border-color:color-mix(in srgb, var(--danger) 45%, var(--line-2));
+        }
+
+        .pill{
+            border:1px solid var(--line);
+            border-radius:999px;
+            padding:4px 8px;
+            font-size:12px;
+            color:var(--muted);
+            background:var(--panel-2);
+        }
+
+        .kbd{
+            font-family:var(--mono);
+            border:1px solid var(--line-2);
+            border-bottom-width:2px;
+            border-radius:6px;
+            padding:1px 5px;
+            background:var(--panel-2);
+            color:var(--text);
+        }
+
+        .editor-wrap{
+            display:grid;
+            grid-template-rows:auto 1fr;
+            min-height:0;
+        }
+
+        .toolbar{
+            padding:10px 12px;
+            border-bottom:1px solid var(--line);
+            background:linear-gradient(to bottom, rgba(127,127,127,.05), transparent);
+            display:flex;
+            gap:8px;
+            align-items:center;
+            flex-wrap:wrap;
+        }
+
+        .canvas-wrap{
+            padding:10px;
+            min-height:0;
+            overflow:auto;
+        }
+
+        #editorSvg{
+            display:block;
+            background:var(--panel-2);
+            border:1px solid var(--line);
+            border-radius:12px;
+            touch-action:none;
+            user-select:none;
+            -webkit-user-select:none;
+        }
+
+        .stat{
+            display:grid;
+            grid-template-columns: auto 1fr;
+            gap:6px 10px;
+            align-items:center;
+            font-size:12px;
+        }
+        .stat .k{ color:var(--muted); }
+
+        .two-col{
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:8px;
+        }
+
+        .three-col{
+            display:grid;
+            grid-template-columns:1fr 1fr 1fr;
+            gap:8px;
+        }
+
+        .sep{
+            height:1px;
+            background:var(--line);
+            margin:4px 0;
+        }
+
+        .good{ color:var(--ok); }
+        .warn{ color:var(--danger); }
+
+        .footnote{
+            font-size:12px;
+            color:var(--muted);
+            line-height:1.35;
+        }
+    </style>
+</head>
+<body data-theme="auto">
+<div class="app">
+    <!-- LEFT CONTROLS -->
+    <section class="panel">
+        <h2>PortMask Editor Controls</h2>
+        <div class="panel-body stack">
+            <div class="two-col">
+                <div>
+                    <label for="glyphChar">Glyph label</label>
+                    <input id="glyphChar" type="text" value="A" maxlength="12" />
+                </div>
+                <div>
+                    <label for="themeMode">Theme</label>
+                    <select id="themeMode">
+                        <option value="auto" selected>Auto</option>
+                        <option value="light">Light</option>
+                        <option value="dark">Dark</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="three-col">
+                <div>
+                    <label for="rowsInput">Rows</label>
+                    <input id="rowsInput" type="number" min="1" max="32" value="6" />
+                </div>
+                <div>
+                    <label for="colsInput">Cols</label>
+                    <input id="colsInput" type="number" min="1" max="32" value="6" />
+                </div>
+                <div>
+                    <label>&nbsp;</label>
+                    <button id="resizeBtn" class="primary" type="button">Resize grid</button>
+                </div>
+            </div>
+
+            <div class="three-col">
+                <div>
+                    <label for="cellSizeInput">Cell px</label>
+                    <input id="cellSizeInput" type="number" min="28" max="140" value="72" />
+                </div>
+                <div>
+                    <label for="strokeInput">Stroke</label>
+                    <input id="strokeInput" type="number" min="1" max="30" value="10" />
+                </div>
+                <div>
+                    <label for="roundInput">Roundness</label>
+                    <input id="roundInput" type="number" min="0" max="24" value="10" />
+                </div>
+            </div>
+
+            <div>
+                <label for="ligBoundary">Ligature boundary (between columns)</label>
+                <input id="ligBoundary" type="range" min="0" max="6" value="3" />
+                <div class="row tiny muted">
+                    <span id="ligBoundaryLabel">Between col 2 and 3</span>
+                </div>
+            </div>
+
+            <div class="two-col">
+                <div class="stack">
+                    <div class="pill">Allowed dangling ports</div>
+                    <label><input id="allowLeft" type="checkbox" checked /> Left edge</label>
+                    <label><input id="allowRight" type="checkbox" checked /> Right edge</label>
+                    <label><input id="allowTop" type="checkbox" /> Top edge</label>
+                    <label><input id="allowBottom" type="checkbox" /> Bottom edge</label>
+                    <label><input id="allowLigBoundary" type="checkbox" checked /> Ligature boundary</label>
+                    <label><input id="showWarnings" type="checkbox" checked /> Show dangling warnings</label>
+                </div>
+                <div class="stack">
+                    <div class="pill">Editing tips</div>
+                    <div class="footnote">
+                        • <strong>Click a port dot</strong> to toggle N/E/S/W.<br>
+                        • <strong>Drag center→center</strong> to draw connections.<br>
+                        • <strong>Shift-drag</strong> (or right mouse) to erase paths.<br>
+                        • <strong>Click a cell background</strong> to cycle useful masks.
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <button id="clearBtn" class="danger" type="button">Clear</button>
+                <button id="invertBtn" type="button">Invert bits</button>
+                <button id="normalizeBtn" type="button">Normalize links</button>
+                <button id="randomBtn" type="button">Randomize</button>
+            </div>
+
+            <div class="sep"></div>
+
+            <div class="stat">
+                <div class="k">Used cells</div><div id="usedCellsStat">0</div>
+                <div class="k">Active ports</div><div id="activePortsStat">0</div>
+                <div class="k">Dangling ports</div><div id="danglingStat">0</div>
+                <div class="k">Hex density</div><div id="hexDensityStat">0%</div>
+            </div>
+
+            <div class="sep"></div>
+
+            <div>
+                <label for="hexRowsOut">Hex rows (compact)</label>
+                <textarea id="hexRowsOut" spellcheck="false"></textarea>
+            </div>
+
+            <div class="row">
+                <button id="loadHexBtn" type="button">Load hex rows</button>
+                <button id="copyHexBtn" type="button">Copy</button>
+                <span class="tiny muted">One row per line (0–F)</span>
+            </div>
+
+            <div>
+                <label for="jsonOut">JSON matrix (decimal masks)</label>
+                <textarea id="jsonOut" spellcheck="false"></textarea>
+            </div>
+
+            <div class="row">
+                <button id="loadJsonBtn" type="button">Load JSON</button>
+                <button id="copyJsonBtn" type="button">Copy</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- CENTER EDITOR -->
+    <section class="panel editor-wrap">
+        <div class="toolbar">
+            <span class="pill">PortMask Grid Canvas</span>
+            <span class="tiny muted" id="canvasInfo"></span>
+        </div>
+        <div class="canvas-wrap">
+            <svg id="editorSvg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="PortMask grid editor"></svg>
+        </div>
+    </section>
+
+    <!-- RIGHT EXPORT / PREVIEW -->
+    <section class="panel">
+        <h2>SVG Export + Preview</h2>
+        <div class="panel-body stack">
+            <div class="two-col">
+                <div>
+                    <label for="exportPad">Export padding</label>
+                    <input id="exportPad" type="number" min="0" max="200" value="16" />
+                </div>
+                <div>
+                    <label for="exportScale">Export cell px</label>
+                    <input id="exportScale" type="number" min="8" max="200" value="64" />
+                </div>
+            </div>
+
+            <div class="two-col">
+                <label><input id="exportGrid" type="checkbox" checked /> Include grid</label>
+                <label><input id="exportLabels" type="checkbox" checked /> Include hex labels</label>
+            </div>
+
+            <div class="two-col">
+                <label><input id="exportMetrics" type="checkbox" checked /> Include metrics</label>
+                <label><input id="exportLig" type="checkbox" checked /> Show ligature boundary</label>
+            </div>
+
+            <div id="svgPreviewBox" class="codebox">
+                <label>SVG preview</label>
+                <div id="svgPreview"></div>
+            </div>
+
+            <div>
+                <label for="svgOut">SVG markup</label>
+                <textarea id="svgOut" spellcheck="false"></textarea>
+            </div>
+
+            <div class="row">
+                <button id="copySvgBtn" type="button">Copy SVG</button>
+                <button id="downloadSvgBtn" class="primary" type="button">Download SVG</button>
+            </div>
+
+            <div class="footnote">
+                Export is a clean SVG representation of the PortMask system (tracks + optional grid/labels/metrics), so it works nicely as a design source for a generator.
+            </div>
+        </div>
+    </section>
+</div>
+
+<script>
+    (() => {
+        const NS = "http://www.w3.org/2000/svg";
+
+        const BITS = { N:1, E:2, S:4, W:8 };
+        const OPP = { N:"S", E:"W", S:"N", W:"E" };
+        const DIR_VEC = { N:[0,-1], E:[1,0], S:[0,1], W:[-1,0] };
+        const DIRS = ["N","E","S","W"];
+        const PRESET_CYCLE = [0x0,0x5,0xA,0x3,0x6,0xC,0x9,0x7,0xB,0xD,0xE,0xF];
+
+        const state = {
+            rows: 6,
+            cols: 6,
+            masks: [],
+            glyphLabel: "A",
+            cellSize: 72,
+            stroke: 10,
+            round: 10,
+            ligBoundary: 3, // boundary between col 2 and 3
+            allowLeft: true,
+            allowRight: true,
+            allowTop: false,
+            allowBottom: false,
+            allowLigBoundary: true,
+            showWarnings: true,
+            exportPad: 16,
+            exportCell: 64,
+            exportGrid: true,
+            exportLabels: true,
+            exportMetrics: true,
+            exportLig: true,
+            theme: "auto",
+        };
+
+        const ui = {
+            body: document.body,
+            glyphChar: document.getElementById("glyphChar"),
+            themeMode: document.getElementById("themeMode"),
+            rowsInput: document.getElementById("rowsInput"),
+            colsInput: document.getElementById("colsInput"),
+            resizeBtn: document.getElementById("resizeBtn"),
+            cellSizeInput: document.getElementById("cellSizeInput"),
+            strokeInput: document.getElementById("strokeInput"),
+            roundInput: document.getElementById("roundInput"),
+            ligBoundary: document.getElementById("ligBoundary"),
+            ligBoundaryLabel: document.getElementById("ligBoundaryLabel"),
+            allowLeft: document.getElementById("allowLeft"),
+            allowRight: document.getElementById("allowRight"),
+            allowTop: document.getElementById("allowTop"),
+            allowBottom: document.getElementById("allowBottom"),
+            allowLigBoundary: document.getElementById("allowLigBoundary"),
+            showWarnings: document.getElementById("showWarnings"),
+            clearBtn: document.getElementById("clearBtn"),
+            invertBtn: document.getElementById("invertBtn"),
+            normalizeBtn: document.getElementById("normalizeBtn"),
+            randomBtn: document.getElementById("randomBtn"),
+            usedCellsStat: document.getElementById("usedCellsStat"),
+            activePortsStat: document.getElementById("activePortsStat"),
+            danglingStat: document.getElementById("danglingStat"),
+            hexDensityStat: document.getElementById("hexDensityStat"),
+            hexRowsOut: document.getElementById("hexRowsOut"),
+            jsonOut: document.getElementById("jsonOut"),
+            loadHexBtn: document.getElementById("loadHexBtn"),
+            copyHexBtn: document.getElementById("copyHexBtn"),
+            loadJsonBtn: document.getElementById("loadJsonBtn"),
+            copyJsonBtn: document.getElementById("copyJsonBtn"),
+            editorSvg: document.getElementById("editorSvg"),
+            canvasInfo: document.getElementById("canvasInfo"),
+            exportPad: document.getElementById("exportPad"),
+            exportScale: document.getElementById("exportScale"),
+            exportGrid: document.getElementById("exportGrid"),
+            exportLabels: document.getElementById("exportLabels"),
+            exportMetrics: document.getElementById("exportMetrics"),
+            exportLig: document.getElementById("exportLig"),
+            svgPreview: document.getElementById("svgPreview"),
+            svgOut: document.getElementById("svgOut"),
+            copySvgBtn: document.getElementById("copySvgBtn"),
+            downloadSvgBtn: document.getElementById("downloadSvgBtn"),
+        };
+
+        let pointerSession = null; // {mode:'path'|'port', op:'add'|'erase', lastCell:{r,c}, paintValue:boolean}
+        let cachedWarnings = [];
+
+        function makeMasks(rows, cols){
+            return Array.from({length: rows}, () => Array(cols).fill(0));
+        }
+
+        function resizeMasksPreserve(newRows, newCols){
+            const next = makeMasks(newRows, newCols);
+            for(let r=0; r<Math.min(state.rows, newRows); r++){
+                for(let c=0; c<Math.min(state.cols, newCols); c++){
+                    next[r][c] = state.masks[r][c] & 0xF;
+                }
+            }
+            state.rows = newRows;
+            state.cols = newCols;
+            state.masks = next;
+
+            ui.ligBoundary.max = String(newCols);
+            if(state.ligBoundary > newCols) state.ligBoundary = newCols;
+            ui.ligBoundary.value = String(state.ligBoundary);
+            updateLigBoundaryLabel();
+        }
+
+        function inBounds(r,c){
+            return r >= 0 && r < state.rows && c >= 0 && c < state.cols;
+        }
+
+        function hasBit(mask, dir){
+            return (mask & BITS[dir]) !== 0;
+        }
+
+        function setBitRC(r,c,dir,value){
+            if(!inBounds(r,c)) return;
+            let m = state.masks[r][c] & 0xF;
+            if(value) m |= BITS[dir];
+            else m &= ~BITS[dir];
+            state.masks[r][c] = m & 0xF;
+        }
+
+        function toggleBitRC(r,c,dir){
+            if(!inBounds(r,c)) return false;
+            let m = state.masks[r][c] & 0xF;
+            const nowOn = (m & BITS[dir]) === 0;
+            if(nowOn) m |= BITS[dir];
+            else m &= ~BITS[dir];
+            state.masks[r][c] = m & 0xF;
+            return nowOn;
+        }
+
+        function cycleCellMask(r,c){
+            if(!inBounds(r,c)) return;
+            const cur = state.masks[r][c] & 0xF;
+            const idx = PRESET_CYCLE.indexOf(cur);
+            const next = PRESET_CYCLE[(idx + 1) % PRESET_CYCLE.length];
+            state.masks[r][c] = next;
+        }
+
+        function setConnection(a, b, op){
+            const dr = b.r - a.r;
+            const dc = b.c - a.c;
+            if(Math.abs(dr) + Math.abs(dc) !== 1) return false;
+
+            let dirA = null;
+            if(dr === -1 && dc === 0) dirA = "N";
+            if(dr ===  1 && dc === 0) dirA = "S";
+            if(dr ===  0 && dc === 1) dirA = "E";
+            if(dr ===  0 && dc === -1) dirA = "W";
+            if(!dirA) return false;
+
+            const dirB = OPP[dirA];
+            const on = (op === "add");
+            setBitRC(a.r, a.c, dirA, on);
+            setBitRC(b.r, b.c, dirB, on);
+            return true;
+        }
+
+        function normalizeLinks(){
+            // Make every internal connection symmetric. Keep outer/boundary danglings as-is.
+            for(let r=0; r<state.rows; r++){
+                for(let c=0; c<state.cols; c++){
+                    for(const dir of ["E","S"]){ // check each pair once
+                        const [dx,dy] = [DIR_VEC[dir][0], DIR_VEC[dir][1]];
+                        const nr = r + dy;
+                        const nc = c + dx;
+                        if(!inBounds(nr,nc)) continue;
+                        const a = hasBit(state.masks[r][c], dir);
+                        const b = hasBit(state.masks[nr][nc], OPP[dir]);
+                        const either = a || b;
+                        setBitRC(r,c,dir,either);
+                        setBitRC(nr,nc,OPP[dir],either);
+                    }
+                }
+            }
+            refresh();
+        }
+
+        function invertBits(){
+            for(let r=0; r<state.rows; r++){
+                for(let c=0; c<state.cols; c++){
+                    state.masks[r][c] = (~state.masks[r][c]) & 0xF;
+                }
+            }
+            refresh();
+        }
+
+        function clearAll(){
+            for(let r=0; r<state.rows; r++){
+                for(let c=0; c<state.cols; c++){
+                    state.masks[r][c] = 0;
+                }
+            }
+            refresh();
+        }
+
+        function randomize(){
+            for(let r=0; r<state.rows; r++){
+                for(let c=0; c<state.cols; c++){
+                    state.masks[r][c] = Math.floor(Math.random() * 16);
+                }
+            }
+            refresh();
+        }
+
+        function getCellGeom(r,c,cellSize = state.cellSize){
+            const x = c * cellSize;
+            const y = r * cellSize;
+            const cx = x + cellSize/2;
+            const cy = y + cellSize/2;
+            const portOffset = cellSize * 0.38;
+            const ports = {
+                N: [cx, cy - portOffset],
+                E: [cx + portOffset, cy],
+                S: [cx, cy + portOffset],
+                W: [cx - portOffset, cy],
+                C: [cx, cy],
+            };
+            return {x,y,cx,cy,ports};
+        }
+
+        function svgEl(tag, attrs = {}, text = null){
+            const el = document.createElementNS(NS, tag);
+            for(const [k,v] of Object.entries(attrs)){
+                if(v == null) continue;
+                el.setAttribute(k, String(v));
+            }
+            if(text != null) el.textContent = text;
+            return el;
+        }
+
+        function hitTest(evt){
+            const pt = clientToSvg(evt, ui.editorSvg);
+            const cs = state.cellSize;
+            const c = Math.floor(pt.x / cs);
+            const r = Math.floor(pt.y / cs);
+
+            if(!inBounds(r,c)) return null;
+
+            const g = getCellGeom(r,c);
+            const lx = pt.x - g.cx;
+            const ly = pt.y - g.cy;
+            const dist = Math.hypot(lx, ly);
+
+            const centerRadius = Math.max(9, cs * 0.10);
+            const portRadius = Math.max(8, cs * 0.09);
+            const hitPortRadius = portRadius + 6;
+
+            // Port hit zones
+            for(const dir of DIRS){
+                const [px, py] = g.ports[dir];
+                const d = Math.hypot(pt.x - px, pt.y - py);
+                if(d <= hitPortRadius){
+                    return {r,c,target:"port",dir,x:pt.x,y:pt.y};
+                }
+            }
+
+            // Center for path drawing
+            if(dist <= centerRadius + 8){
+                return {r,c,target:"center",x:pt.x,y:pt.y};
+            }
+
+            // Else cell
+            return {r,c,target:"cell",x:pt.x,y:pt.y};
+        }
+
+        function clientToSvg(evt, svg){
+            const rect = svg.getBoundingClientRect();
+            const viewBox = svg.viewBox.baseVal;
+            const x = ((evt.clientX - rect.left) / rect.width) * viewBox.width + viewBox.x;
+            const y = ((evt.clientY - rect.top) / rect.height) * viewBox.height + viewBox.y;
+            return {x,y};
+        }
+
+        function pointerDown(evt){
+            evt.preventDefault();
+            const hit = hitTest(evt);
+            if(!hit) return;
+
+            const erase = evt.button === 2 || evt.shiftKey;
+            const op = erase ? "erase" : "add";
+
+            ui.editorSvg.setPointerCapture?.(evt.pointerId);
+
+            if(hit.target === "port"){
+                const paintValue = evt.button === 2 ? false : toggleBitRC(hit.r, hit.c, hit.dir);
+                pointerSession = { mode:"port", paintValue, lastPortKey:`${hit.r},${hit.c},${hit.dir}` };
+                refresh();
+                return;
+            }
+
+            if(hit.target === "center"){
+                pointerSession = { mode:"path", op, lastCell:{r:hit.r,c:hit.c} };
+                return;
+            }
+
+            if(hit.target === "cell"){
+                if(erase){
+                    state.masks[hit.r][hit.c] = 0;
+                } else {
+                    cycleCellMask(hit.r, hit.c);
+                }
+                pointerSession = { mode:"cellPaint", op: erase ? "erase":"cycle", lastCell:{r:hit.r,c:hit.c} };
+                refresh();
+            }
+        }
+
+        function pointerMove(evt){
+            if(!pointerSession) return;
+            evt.preventDefault();
+            const hit = hitTest(evt);
+            if(!hit) return;
+
+            if(pointerSession.mode === "port"){
+                if(hit.target !== "port") return;
+                const key = `${hit.r},${hit.c},${hit.dir}`;
+                if(key === pointerSession.lastPortKey) return;
+                setBitRC(hit.r, hit.c, hit.dir, pointerSession.paintValue);
+                pointerSession.lastPortKey = key;
+                refresh();
+                return;
+            }
+
+            if(pointerSession.mode === "path"){
+                if(hit.target !== "center") return;
+                const last = pointerSession.lastCell;
+                if(hit.r === last.r && hit.c === last.c) return;
+
+                // allow quick drag skipping multiple cells in straight line
+                const dr = hit.r - last.r;
+                const dc = hit.c - last.c;
+                if(dr !== 0 && dc !== 0) return; // no diagonals
+                const steps = Math.max(Math.abs(dr), Math.abs(dc));
+                let cur = { ...last };
+                for(let i=0; i<steps; i++){
+                    const next = {
+                        r: cur.r + Math.sign(dr),
+                        c: cur.c + Math.sign(dc),
+                    };
+                    setConnection(cur, next, pointerSession.op);
+                    cur = next;
+                }
+                pointerSession.lastCell = cur;
+                refresh();
+                return;
+            }
+
+            if(pointerSession.mode === "cellPaint"){
+                if(hit.target !== "cell") return;
+                const last = pointerSession.lastCell;
+                if(hit.r === last.r && hit.c === last.c) return;
+
+                if(pointerSession.op === "erase"){
+                    state.masks[hit.r][hit.c] = 0;
+                } else {
+                    cycleCellMask(hit.r, hit.c);
+                }
+                pointerSession.lastCell = {r:hit.r,c:hit.c};
+                refresh();
+            }
+        }
+
+        function pointerUp(evt){
+            if(pointerSession){
+                ui.editorSvg.releasePointerCapture?.(evt.pointerId);
+            }
+            pointerSession = null;
+        }
+
+        function isBoundaryBetweenCols(leftCol, rightCol){
+            // ligBoundary is a divider at x = boundary * cellSize; allowed mismatch between boundary-1 and boundary
+            if(!state.allowLigBoundary) return false;
+            if(leftCol + 1 !== rightCol) return false;
+            return state.ligBoundary === rightCol;
+        }
+
+        function isDangleAllowed(r,c,dir){
+            // Outer edges
+            if(dir === "W" && c === 0) return state.allowLeft;
+            if(dir === "E" && c === state.cols - 1) return state.allowRight;
+            if(dir === "N" && r === 0) return state.allowTop;
+            if(dir === "S" && r === state.rows - 1) return state.allowBottom;
+
+            // Internal ligature boundary mismatches
+            if(dir === "E" && c < state.cols - 1 && isBoundaryBetweenCols(c, c+1)) return true;
+            if(dir === "W" && c > 0 && isBoundaryBetweenCols(c-1, c)) return true;
+
+            return false;
+        }
+
+        function computeWarnings(){
+            const warnings = [];
+            let danglingCount = 0;
+            let activePorts = 0;
+            let usedCells = 0;
+
+            for(let r=0; r<state.rows; r++){
+                for(let c=0; c<state.cols; c++){
+                    const m = state.masks[r][c] & 0xF;
+                    if(m) usedCells++;
+                    for(const dir of DIRS){
+                        if(!hasBit(m,dir)) continue;
+                        activePorts++;
+                        const [dx,dy] = DIR_VEC[dir];
+                        const nr = r + dy, nc = c + dx;
+                        let isDangling = false;
+
+                        if(!inBounds(nr,nc)){
+                            isDangling = !isDangleAllowed(r,c,dir);
+                        } else {
+                            const otherHas = hasBit(state.masks[nr][nc], OPP[dir]);
+                            if(!otherHas){
+                                isDangling = !isDangleAllowed(r,c,dir);
+                            }
+                        }
+
+                        if(isDangling){
+                            warnings.push({r,c,dir});
+                            danglingCount++;
+                        }
+                    }
+                }
+            }
+
+            cachedWarnings = warnings;
+            return { warnings, danglingCount, activePorts, usedCells };
+        }
+
+        function renderEditor(){
+            const cs = state.cellSize;
+            const w = state.cols * cs;
+            const h = state.rows * cs;
+
+            ui.editorSvg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+            ui.editorSvg.setAttribute("width", w);
+            ui.editorSvg.setAttribute("height", h);
+
+            while(ui.editorSvg.firstChild) ui.editorSvg.removeChild(ui.editorSvg.firstChild);
+
+            const styles = getComputedStyle(document.body);
+            const colors = {
+                bg: styles.getPropertyValue("--panel-2").trim(),
+                line: styles.getPropertyValue("--line").trim(),
+                line2: styles.getPropertyValue("--line-2").trim(),
+                text: styles.getPropertyValue("--text").trim(),
+                muted: styles.getPropertyValue("--muted").trim(),
+                accent: styles.getPropertyValue("--accent").trim(),
+                accent2: styles.getPropertyValue("--accent-2").trim(),
+                danger: styles.getPropertyValue("--danger").trim(),
+                track: styles.getPropertyValue("--track").trim(),
+                portFill: styles.getPropertyValue("--port-fill").trim(),
+                portStroke: styles.getPropertyValue("--port-stroke").trim(),
+                cellFill: styles.getPropertyValue("--cell-fill").trim(),
+                cellActive: styles.getPropertyValue("--cell-active").trim(),
+            };
+
+            ui.editorSvg.appendChild(svgEl("rect", {
+                x:0, y:0, width:w, height:h, fill: colors.bg
+            }));
+
+            // Metrics guide lines (cap/x/baseline-ish)
+            const metricYs = [
+                Math.round(h * 0.18) + 0.5,
+                Math.round(h * 0.50) + 0.5,
+                Math.round(h * 0.82) + 0.5,
+            ];
+            const metricNames = ["cap", "x", "baseline"];
+            metricYs.forEach((yy, i) => {
+                ui.editorSvg.appendChild(svgEl("line", {
+                    x1:0, y1:yy, x2:w, y2:yy,
+                    stroke: colors.muted, "stroke-width":1.2, "stroke-dasharray":"5 4", opacity:"0.6"
+                }));
+                const tx = Math.max(4, w - 68);
+                ui.editorSvg.appendChild(svgEl("rect", {
+                    x: tx, y: yy - 14, width:64, height:14, rx:4, fill: colors.bg, opacity:"0.9"
+                }));
+                ui.editorSvg.appendChild(svgEl("text", {
+                    x: tx + 7, y: yy - 3,
+                    "font-size":"11", "font-family":"var(--sans)", fill: colors.muted
+                }, metricNames[i]));
+            });
+
+            // Ligature boundary
+            if(state.ligBoundary > 0 && state.ligBoundary < state.cols){
+                const bx = state.ligBoundary * cs + 0.5;
+                ui.editorSvg.appendChild(svgEl("line", {
+                    x1:bx, y1:0, x2:bx, y2:h,
+                    stroke: colors.accent2, "stroke-width":2, "stroke-dasharray":"6 5", opacity:"0.9"
+                }));
+            }
+
+            // Grid cells
+            for(let r=0; r<state.rows; r++){
+                for(let c=0; c<state.cols; c++){
+                    const g = getCellGeom(r,c);
+                    const m = state.masks[r][c] & 0xF;
+                    const active = m !== 0;
+
+                    ui.editorSvg.appendChild(svgEl("rect", {
+                        x: g.x + 0.75,
+                        y: g.y + 0.75,
+                        width: cs - 1.5,
+                        height: cs - 1.5,
+                        rx: Math.max(4, state.round * 0.45),
+                        fill: active ? colors.cellActive : colors.cellFill,
+                        stroke: colors.line2,
+                        "stroke-width": 1
+                    }));
+
+                    // Tracks
+                    const strokeW = Math.max(1, state.stroke);
+                    for(const dir of DIRS){
+                        if(!hasBit(m,dir)) continue;
+                        const [px,py] = g.ports[dir];
+                        ui.editorSvg.appendChild(svgEl("line", {
+                            x1: g.cx, y1: g.cy, x2: px, y2: py,
+                            stroke: colors.track,
+                            "stroke-width": strokeW,
+                            "stroke-linecap":"round",
+                            "stroke-linejoin":"round"
+                        }));
+                    }
+
+                    // Center + ports
+                    const centerR = Math.max(3, cs * 0.055);
+                    const portR = Math.max(4, cs * 0.065);
+                    const portStrokeW = 1.4;
+
+                    ui.editorSvg.appendChild(svgEl("circle", {
+                        cx:g.cx, cy:g.cy, r:centerR + 1.2, fill: colors.accent, opacity: active ? "0.95" : "0.75"
+                    }));
+
+                    for(const dir of DIRS){
+                        const on = hasBit(m,dir);
+                        const [px,py] = g.ports[dir];
+                        ui.editorSvg.appendChild(svgEl("circle", {
+                            cx:px, cy:py, r:portR,
+                            fill: on ? colors.accent : colors.portFill,
+                            stroke: on ? colors.accent : colors.portStroke,
+                            "stroke-width": on ? 1.2 : portStrokeW
+                        }));
+                    }
+
+                    // Hex label
+                    ui.editorSvg.appendChild(svgEl("rect", {
+                        x:g.x + 4, y:g.y + 4, width:20, height:14, rx:4,
+                        fill: colors.bg, opacity:"0.9"
+                    }));
+                    ui.editorSvg.appendChild(svgEl("text", {
+                        x:g.x + 10, y:g.y + 15,
+                        "font-size":"11",
+                        "font-family":"var(--mono)",
+                        fill: active ? colors.accent : colors.muted
+                    }, m.toString(16).toUpperCase()));
+                }
+            }
+
+            // Column / row labels
+            for(let c=0; c<state.cols; c++){
+                ui.editorSvg.appendChild(svgEl("text", {
+                    x: c*cs + cs/2 - 4,
+                    y: 12,
+                    "font-size":"11",
+                    "font-family":"var(--mono)",
+                    fill: colors.muted
+                }, String(c)));
+            }
+            for(let r=0; r<state.rows; r++){
+                ui.editorSvg.appendChild(svgEl("text", {
+                    x: 4,
+                    y: r*cs + 26,
+                    "font-size":"11",
+                    "font-family":"var(--mono)",
+                    fill: colors.muted
+                }, String(r)));
+            }
+
+            // Dangling warnings
+            if(state.showWarnings){
+                cachedWarnings.forEach(warn => {
+                    const g = getCellGeom(warn.r, warn.c);
+                    const [px,py] = g.ports[warn.dir];
+                    ui.editorSvg.appendChild(svgEl("circle", {
+                        cx:px, cy:py, r:Math.max(8, cs * 0.09),
+                        fill:"none",
+                        stroke: colors.danger,
+                        "stroke-width": 2,
+                        "stroke-dasharray":"3 2",
+                        opacity:"0.95"
+                    }));
+                });
+            }
+
+            ui.canvasInfo.textContent = `${state.cols}×${state.rows} • ${w}×${h}px canvas`;
+        }
+
+        function updateOutputs(){
+            // Hex rows
+            const hexRows = state.masks.map(row => row.map(v => (v & 0xF).toString(16).toUpperCase()).join("")).join("\n");
+            ui.hexRowsOut.value = hexRows;
+
+            // JSON matrix
+            ui.jsonOut.value = JSON.stringify(state.masks, null, 2);
+
+            // SVG export
+            const svgMarkup = buildExportSvgString();
+            ui.svgOut.value = svgMarkup;
+
+            // Preview
+            ui.svgPreview.innerHTML = svgMarkup;
+        }
+
+        function buildExportSvgString(){
+            const pad = Math.max(0, state.exportPad|0);
+            const cs = Math.max(8, state.exportCell|0);
+            const strokeW = Math.max(1, Math.round(state.stroke * (cs / state.cellSize)));
+            const round = Math.max(0, Math.round(state.round * (cs / state.cellSize)));
+            const w = state.cols * cs + pad * 2;
+            const h = state.rows * cs + pad * 2;
+
+            const styles = getComputedStyle(document.body);
+            const colors = {
+                bg: "none",
+                text: styles.getPropertyValue("--text").trim(),
+                muted: styles.getPropertyValue("--muted").trim(),
+                line: styles.getPropertyValue("--line").trim(),
+                line2: styles.getPropertyValue("--line-2").trim(),
+                accent: styles.getPropertyValue("--accent").trim(),
+                accent2: styles.getPropertyValue("--accent-2").trim(),
+                track: styles.getPropertyValue("--track").trim(),
+                cellFill: styles.getPropertyValue("--cell-fill").trim(),
+                cellActive: styles.getPropertyValue("--cell-active").trim(),
+                danger: styles.getPropertyValue("--danger").trim(),
+            };
+
+            const svg = svgEl("svg", {
+                xmlns: NS,
+                viewBox: `0 0 ${w} ${h}`,
+                width: w,
+                height: h,
+                role: "img",
+                "aria-labelledby": "title desc"
+            });
+
+            svg.appendChild(svgEl("title", {id:"title"}, `PortMask glyph ${state.glyphLabel}`));
+            svg.appendChild(svgEl("desc", {id:"desc"}, `Grid/logic glyph with ${state.cols} columns and ${state.rows} rows, each cell encoded as a 4-bit port mask.`));
+
+            if(ui.exportGrid.checked){
+                svg.appendChild(svgEl("rect", {x:0, y:0, width:w, height:h, fill: "transparent"}));
+            }
+
+            // Optional metrics
+            if(ui.exportMetrics.checked){
+                const metricYs = [
+                    pad + Math.round(state.rows * cs * 0.18) + 0.5,
+                    pad + Math.round(state.rows * cs * 0.50) + 0.5,
+                    pad + Math.round(state.rows * cs * 0.82) + 0.5,
+                ];
+                const names = ["cap","x","baseline"];
+                metricYs.forEach((yy, i) => {
+                    svg.appendChild(svgEl("line", {
+                        x1: pad, y1: yy, x2: w-pad, y2: yy,
+                        stroke: colors.muted, "stroke-width": 1.1, "stroke-dasharray": "5 4", opacity: "0.6"
+                    }));
+                    svg.appendChild(svgEl("text", {
+                        x: w - pad - 54, y: yy - 4,
+                        fill: colors.muted, "font-size":"11", "font-family":"ui-sans-serif, system-ui"
+                    }, names[i]));
+                });
+            }
+
+            // Ligature boundary
+            if(ui.exportLig.checked && state.ligBoundary > 0 && state.ligBoundary < state.cols){
+                const bx = pad + state.ligBoundary * cs + 0.5;
+                svg.appendChild(svgEl("line", {
+                    x1: bx, y1: pad, x2: bx, y2: h-pad,
+                    stroke: colors.accent2, "stroke-width":"2", "stroke-dasharray":"6 5", opacity:"0.9"
+                }));
+            }
+
+            // Grid cells + tracks
+            for(let r=0; r<state.rows; r++){
+                for(let c=0; c<state.cols; c++){
+                    const x = pad + c * cs;
+                    const y = pad + r * cs;
+                    const cx = x + cs/2;
+                    const cy = y + cs/2;
+                    const portOffset = cs * 0.38;
+                    const m = state.masks[r][c] & 0xF;
+
+                    const ports = {
+                        N: [cx, cy - portOffset],
+                        E: [cx + portOffset, cy],
+                        S: [cx, cy + portOffset],
+                        W: [cx - portOffset, cy],
+                    };
+
+                    if(ui.exportGrid.checked){
+                        svg.appendChild(svgEl("rect", {
+                            x: x + 0.5, y: y + 0.5,
+                            width: cs - 1, height: cs - 1,
+                            rx: Math.max(4, round * 0.5),
+                            fill: m ? colors.cellActive : colors.cellFill,
+                            stroke: colors.line2,
+                            "stroke-width":"1"
+                        }));
+                    }
+
+                    for(const dir of DIRS){
+                        if(!hasBit(m, dir)) continue;
+                        const [px,py] = ports[dir];
+                        svg.appendChild(svgEl("line", {
+                            x1: cx, y1: cy, x2: px, y2: py,
+                            stroke: colors.track,
+                            "stroke-width": strokeW,
+                            "stroke-linecap": "round",
+                            "stroke-linejoin": "round"
+                        }));
+                    }
+
+                    // center dot
+                    svg.appendChild(svgEl("circle", {
+                        cx, cy, r: Math.max(2, cs*0.04),
+                        fill: colors.track, opacity: m ? "1" : "0.55"
+                    }));
+
+                    if(ui.exportGrid.checked){
+                        // ports as hints
+                        for(const dir of DIRS){
+                            const [px,py] = ports[dir];
+                            const on = hasBit(m, dir);
+                            svg.appendChild(svgEl("circle", {
+                                cx:px, cy:py, r: Math.max(2.5, cs*0.05),
+                                fill: on ? colors.accent : "transparent",
+                                stroke: on ? colors.accent : colors.line,
+                                "stroke-width":"1"
+                            }));
+                        }
+                    }
+
+                    if(ui.exportLabels.checked){
+                        svg.appendChild(svgEl("text", {
+                            x: x + 6,
+                            y: y + 15,
+                            fill: m ? colors.accent : colors.muted,
+                            "font-size":"11",
+                            "font-family":"ui-monospace, monospace"
+                        }, m.toString(16).toUpperCase()));
+                    }
+                }
+            }
+
+            // Glyph label
+            svg.appendChild(svgEl("text", {
+                x: pad, y: Math.max(13, pad - 4),
+                fill: colors.text,
+                "font-size":"12",
+                "font-family":"ui-sans-serif, system-ui",
+                "font-weight":"700"
+            }, `Glyph: ${state.glyphLabel}`));
+
+            return new XMLSerializer().serializeToString(svg);
+        }
+
+        function refreshStats(){
+            const {danglingCount, activePorts, usedCells} = computeWarnings();
+            const totalCells = state.rows * state.cols;
+            const density = totalCells ? (usedCells / totalCells * 100) : 0;
+
+            ui.usedCellsStat.textContent = `${usedCells} / ${totalCells}`;
+            ui.activePortsStat.textContent = String(activePorts);
+            ui.danglingStat.textContent = danglingCount === 0 ? "0 ✓" : String(danglingCount);
+            ui.danglingStat.className = danglingCount === 0 ? "good" : "warn";
+            ui.hexDensityStat.textContent = `${density.toFixed(1)}%`;
+        }
+
+        function refresh(){
+            syncStateFromInputs(false);
+            refreshStats();
+            renderEditor();
+            updateOutputs();
+        }
+
+        function syncStateFromInputs(includeGridDims = false){
+            state.glyphLabel = ui.glyphChar.value || "glyph";
+            state.theme = ui.themeMode.value;
+            document.body.setAttribute("data-theme", state.theme);
+
+            state.cellSize = clampInt(ui.cellSizeInput.value, 28, 140, state.cellSize);
+            state.stroke = clampInt(ui.strokeInput.value, 1, 30, state.stroke);
+            state.round = clampInt(ui.roundInput.value, 0, 24, state.round);
+
+            state.ligBoundary = clampInt(ui.ligBoundary.value, 0, state.cols, state.ligBoundary);
+            state.allowLeft = ui.allowLeft.checked;
+            state.allowRight = ui.allowRight.checked;
+            state.allowTop = ui.allowTop.checked;
+            state.allowBottom = ui.allowBottom.checked;
+            state.allowLigBoundary = ui.allowLigBoundary.checked;
+            state.showWarnings = ui.showWarnings.checked;
+
+            state.exportPad = clampInt(ui.exportPad.value, 0, 200, state.exportPad);
+            state.exportCell = clampInt(ui.exportScale.value, 8, 200, state.exportCell);
+            state.exportGrid = ui.exportGrid.checked;
+            state.exportLabels = ui.exportLabels.checked;
+            state.exportMetrics = ui.exportMetrics.checked;
+            state.exportLig = ui.exportLig.checked;
+
+            if(includeGridDims){
+                const nr = clampInt(ui.rowsInput.value, 1, 32, state.rows);
+                const nc = clampInt(ui.colsInput.value, 1, 32, state.cols);
+                resizeMasksPreserve(nr, nc);
+            }
+
+            updateLigBoundaryLabel();
+        }
+
+        function updateLigBoundaryLabel(){
+            const b = state.ligBoundary;
+            if(b <= 0) ui.ligBoundaryLabel.textContent = "Before col 0 (left of grid)";
+            else if(b >= state.cols) ui.ligBoundaryLabel.textContent = `After col ${state.cols - 1} (right of grid)`;
+            else ui.ligBoundaryLabel.textContent = `Between col ${b - 1} and ${b}`;
+        }
+
+        function clampInt(value, min, max, fallback){
+            const n = Number.parseInt(value, 10);
+            if(Number.isNaN(n)) return fallback;
+            return Math.min(max, Math.max(min, n));
+        }
+
+        async function copyText(text){
+            try{
+                await navigator.clipboard.writeText(text);
+            }catch{
+                // fallback
+                const ta = document.createElement("textarea");
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand("copy");
+                ta.remove();
+            }
+        }
+
+        function downloadText(filename, content, type = "image/svg+xml"){
+            const blob = new Blob([content], {type});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+
+        function loadHexRows(){
+            const raw = ui.hexRowsOut.value.replace(/\r/g, "");
+            const lines = raw.split("\n").map(s => s.trim()).filter(Boolean);
+            if(!lines.length) return;
+
+            const rows = lines.length;
+            const cols = Math.max(...lines.map(s => s.length));
+            const next = makeMasks(rows, cols);
+
+            for(let r=0; r<rows; r++){
+                const line = lines[r].toUpperCase();
+                for(let c=0; c<cols; c++){
+                    const ch = line[c] || "0";
+                    const v = parseInt(ch, 16);
+                    next[r][c] = Number.isFinite(v) ? (v & 0xF) : 0;
+                }
+            }
+
+            state.rows = rows;
+            state.cols = cols;
+            state.masks = next;
+
+            ui.rowsInput.value = String(rows);
+            ui.colsInput.value = String(cols);
+            ui.ligBoundary.max = String(cols);
+            if(state.ligBoundary > cols) state.ligBoundary = cols;
+            ui.ligBoundary.value = String(state.ligBoundary);
+            refresh();
+        }
+
+        function loadJsonMatrix(){
+            let data;
+            try{
+                data = JSON.parse(ui.jsonOut.value);
+            }catch(err){
+                alert("JSON parse error.");
+                return;
+            }
+
+            if(!Array.isArray(data) || !data.every(row => Array.isArray(row))){
+                alert("JSON must be a 2D array.");
+                return;
+            }
+
+            const rows = data.length;
+            const cols = rows ? Math.max(...data.map(row => row.length)) : 0;
+            if(rows < 1 || cols < 1){
+                alert("Matrix must be at least 1×1.");
+                return;
+            }
+
+            const next = makeMasks(rows, cols);
+            for(let r=0; r<rows; r++){
+                for(let c=0; c<cols; c++){
+                    const v = Number(data[r][c] ?? 0);
+                    next[r][c] = (Number.isFinite(v) ? Math.round(v) : 0) & 0xF;
+                }
+            }
+
+            state.rows = rows;
+            state.cols = cols;
+            state.masks = next;
+
+            ui.rowsInput.value = String(rows);
+            ui.colsInput.value = String(cols);
+            ui.ligBoundary.max = String(cols);
+            if(state.ligBoundary > cols) state.ligBoundary = cols;
+            ui.ligBoundary.value = String(state.ligBoundary);
+
+            refresh();
+        }
+
+        // Event wiring
+        ui.themeMode.addEventListener("change", refresh);
+        ui.glyphChar.addEventListener("input", refresh);
+
+        ui.cellSizeInput.addEventListener("input", refresh);
+        ui.strokeInput.addEventListener("input", refresh);
+        ui.roundInput.addEventListener("input", refresh);
+
+        ui.ligBoundary.addEventListener("input", refresh);
+        ui.allowLeft.addEventListener("change", refresh);
+        ui.allowRight.addEventListener("change", refresh);
+        ui.allowTop.addEventListener("change", refresh);
+        ui.allowBottom.addEventListener("change", refresh);
+        ui.allowLigBoundary.addEventListener("change", refresh);
+        ui.showWarnings.addEventListener("change", refresh);
+
+        ui.exportPad.addEventListener("input", refresh);
+        ui.exportScale.addEventListener("input", refresh);
+        ui.exportGrid.addEventListener("change", refresh);
+        ui.exportLabels.addEventListener("change", refresh);
+        ui.exportMetrics.addEventListener("change", refresh);
+        ui.exportLig.addEventListener("change", refresh);
+
+        ui.resizeBtn.addEventListener("click", () => {
+            syncStateFromInputs(true);
+            refresh();
+        });
+
+        ui.clearBtn.addEventListener("click", () => {
+            if(confirm("Clear the whole grid?")) clearAll();
+        });
+        ui.invertBtn.addEventListener("click", invertBits);
+        ui.normalizeBtn.addEventListener("click", normalizeLinks);
+        ui.randomBtn.addEventListener("click", randomize);
+
+        ui.copyHexBtn.addEventListener("click", () => copyText(ui.hexRowsOut.value));
+        ui.copyJsonBtn.addEventListener("click", () => copyText(ui.jsonOut.value));
+        ui.copySvgBtn.addEventListener("click", () => copyText(ui.svgOut.value));
+
+        ui.loadHexBtn.addEventListener("click", loadHexRows);
+        ui.loadJsonBtn.addEventListener("click", loadJsonMatrix);
+
+        ui.downloadSvgBtn.addEventListener("click", () => {
+            const base = (state.glyphLabel || "portmask").trim().replace(/[^\w.-]+/g, "_");
+            downloadText(`portmask-${base}.svg`, ui.svgOut.value, "image/svg+xml");
+        });
+
+        // Pointer editing
+        ui.editorSvg.addEventListener("pointerdown", pointerDown);
+        ui.editorSvg.addEventListener("pointermove", pointerMove);
+        ui.editorSvg.addEventListener("pointerup", pointerUp);
+        ui.editorSvg.addEventListener("pointercancel", pointerUp);
+        ui.editorSvg.addEventListener("contextmenu", (e) => e.preventDefault());
+
+        // Keyboard helpers
+        window.addEventListener("keydown", (e) => {
+            if(e.target && /input|textarea|select/i.test(e.target.tagName)) return;
+
+            if(e.key === "Delete" || e.key === "Backspace"){
+                e.preventDefault();
+                clearAll();
+            } else if(e.key.toLowerCase() === "n"){
+                e.preventDefault();
+                normalizeLinks();
+            } else if(e.key.toLowerCase() === "i"){
+                e.preventDefault();
+                invertBits();
+            } else if(e.key.toLowerCase() === "r"){
+                e.preventDefault();
+                randomize();
+            }
+        });
+
+        // Init
+        state.masks = makeMasks(state.rows, state.cols);
+        ui.rowsInput.value = String(state.rows);
+        ui.colsInput.value = String(state.cols);
+        ui.ligBoundary.max = String(state.cols);
+        ui.ligBoundary.value = String(state.ligBoundary);
+        refresh();
+    })();
+</script>
+</body>
+</html>
