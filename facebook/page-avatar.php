@@ -2,42 +2,85 @@
 declare(strict_types=1);
 
 /*
- * facebook-page-avatar.php
+ * facebook-page-avatar-url.php
  *
  * Very basic demo:
- * - Upload an image from your browser
- * - POST it to /{page-id}/photos
- * - POST the returned photo ID to /{page-id}/picture
+ * - Enter a publicly reachable image URL
+ * - POST it to /{page-id}/picture
  *
- * Before using:
- * 1. Create a Meta app
- * 2. Obtain a PAGE access token for the page you manage
- * 3. Fill in PAGE_ID and PAGE_ACCESS_TOKEN below
+ * Config:
+ * - Reads config from ../config.ini
+ *
+ * Example config.ini:
+ *
+ * [facebook]
+ * page_id = "123456789012345"
+ * page_access_token = "EAAB..."
+ * graph_version = "v25.0"
  *
  * SECURITY NOTE:
- * - Do not leave this file publicly exposed without authentication.
- * - Move secrets into environment variables for production use.
+ * - Keep config.ini outside the public web root if possible.
+ * - Do not expose this script publicly without authentication.
  */
-
-const GRAPH_VERSION = 'v25.0';
-const PAGE_ID = 'YOUR_PAGE_ID';
-const PAGE_ACCESS_TOKEN = 'YOUR_PAGE_ACCESS_TOKEN';
 
 function h(string $value): string
 {
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 }
 
-function graphPost(string $endpoint, array $fields): array
+function loadConfig(): array
 {
-    $url = 'https://graph.facebook.com/' . GRAPH_VERSION . '/' . ltrim($endpoint, '/');
+    $configPath = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'config.ini';
+
+    if (!is_file($configPath)) {
+        throw new RuntimeException('Config file not found: ' . $configPath);
+    }
+
+    $config = parse_ini_file($configPath, true, INI_SCANNER_TYPED);
+
+    if ($config === false) {
+        throw new RuntimeException('Could not parse config file: ' . $configPath);
+    }
+
+    $fb = $config['facebook'] ?? null;
+    if (!is_array($fb)) {
+        throw new RuntimeException('Missing [facebook] section in config.ini');
+    }
+
+    $pageId = trim((string)($fb['page_id'] ?? ''));
+    $pageAccessToken = trim((string)($fb['page_access_token'] ?? ''));
+    $graphVersion = trim((string)($fb['graph_version'] ?? 'v25.0'));
+
+    if ($pageId === '') {
+        throw new RuntimeException('Missing facebook.page_id in config.ini');
+    }
+
+    if ($pageAccessToken === '') {
+        throw new RuntimeException('Missing facebook.page_access_token in config.ini');
+    }
+
+    if ($graphVersion === '') {
+        $graphVersion = 'v25.0';
+    }
+
+    return [
+            'page_id' => $pageId,
+            'page_access_token' => $pageAccessToken,
+            'graph_version' => $graphVersion,
+            'config_path' => $configPath,
+    ];
+}
+
+function graphPost(string $graphVersion, string $endpoint, array $fields): array
+{
+    $url = 'https://graph.facebook.com/' . $graphVersion . '/' . ltrim($endpoint, '/');
 
     $ch = curl_init($url);
     curl_setopt_array($ch, [
-        CURLOPT_POST => true,
-        CURLOPT_POSTFIELDS => $fields,
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 60,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => http_build_query($fields),
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 60,
     ]);
 
     $raw = curl_exec($ch);
@@ -63,79 +106,53 @@ function graphPost(string $endpoint, array $fields): array
     }
 
     return [
-        'http_code' => $httpCode,
-        'body' => $json,
-        'raw' => $raw,
+            'http_code' => $httpCode,
+            'body' => $json,
+            'raw' => $raw,
     ];
 }
 
 $status = null;
 $error = null;
 $debug = [];
+$pictureUrl = '';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+try {
+    $cfg = loadConfig();
+} catch (Throwable $e) {
+    $cfg = null;
+    $error = $e->getMessage();
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $cfg !== null) {
     try {
-        if (PAGE_ID === 'YOUR_PAGE_ID' || PAGE_ACCESS_TOKEN === 'YOUR_PAGE_ACCESS_TOKEN') {
-            throw new RuntimeException('Please set PAGE_ID and PAGE_ACCESS_TOKEN in the PHP file first.');
+        $pictureUrl = trim((string)($_POST['picture_url'] ?? ''));
+
+        if ($pictureUrl === '') {
+            throw new RuntimeException('Please enter an image URL.');
         }
 
-        if (!isset($_FILES['avatar']) || $_FILES['avatar']['error'] !== UPLOAD_ERR_OK) {
-            throw new RuntimeException('Please choose an image file first.');
+        if (!filter_var($pictureUrl, FILTER_VALIDATE_URL)) {
+            throw new RuntimeException('Please enter a valid absolute URL.');
         }
 
-        $tmpPath = $_FILES['avatar']['tmp_name'];
-        $originalName = $_FILES['avatar']['name'] ?? 'upload.jpg';
-        $fileSize = (int) ($_FILES['avatar']['size'] ?? 0);
-
-        if ($fileSize <= 0) {
-            throw new RuntimeException('The uploaded file appears to be empty.');
+        $parts = parse_url($pictureUrl);
+        $scheme = strtolower((string)($parts['scheme'] ?? ''));
+        if (!in_array($scheme, ['http', 'https'], true)) {
+            throw new RuntimeException('Only http:// and https:// URLs are supported.');
         }
 
-        // Basic MIME validation
-        $finfo = new finfo(FILEINFO_MIME_TYPE);
-        $mime = $finfo->file($tmpPath) ?: 'application/octet-stream';
-
-        $allowed = [
-            'image/jpeg',
-            'image/png',
-            'image/gif',
-            'image/webp',
-        ];
-
-        if (!in_array($mime, $allowed, true)) {
-            throw new RuntimeException('Unsupported file type: ' . $mime);
-        }
-
-        // Step 1: upload the image to the Page
-        $photoUpload = graphPost(
-            PAGE_ID . '/photos',
-            [
-                'access_token' => PAGE_ACCESS_TOKEN,
-                // Keep it out of the public feed if possible
-                'published' => 'false',
-                'source' => new CURLFile($tmpPath, $mime, $originalName),
-            ]
-        );
-
-        $photoId = $photoUpload['body']['id'] ?? null;
-        if (!$photoId) {
-            throw new RuntimeException('Upload succeeded, but no photo ID was returned.');
-        }
-
-        $debug['upload_response'] = $photoUpload['body'];
-
-        // Step 2: set that uploaded photo as the Page profile picture
         $pictureUpdate = graphPost(
-            PAGE_ID . '/picture',
-            [
-                'access_token' => PAGE_ACCESS_TOKEN,
-                'photo' => (string) $photoId,
-                'profile_pic_method' => 'custom',
-            ]
+                $cfg['graph_version'],
+                $cfg['page_id'] . '/picture',
+                [
+                        'access_token' => $cfg['page_access_token'],
+                        'picture' => $pictureUrl,
+                        'profile_pic_method' => 'custom',
+                ]
         );
 
         $debug['picture_response'] = $pictureUpdate['body'];
-
         $status = 'Profile picture updated successfully.';
     } catch (Throwable $e) {
         $error = $e->getMessage();
@@ -149,33 +166,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title>Update Facebook Page Profile Picture</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-        body {
+        body{
             font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
             margin: 2rem;
             line-height: 1.45;
             background: #f7f7f8;
             color: #111;
         }
-        .box {
-            max-width: 42rem;
+        .box{
+            max-width: 46rem;
             background: #fff;
             border: 1px solid #ddd;
             border-radius: 10px;
             padding: 1.25rem;
             box-shadow: 0 8px 24px rgba(0,0,0,.05);
         }
-        h1 {
+        h1{
             margin-top: 0;
             font-size: 1.4rem;
         }
-        .row {
+        .row{
             margin: 1rem 0;
         }
-        input[type="file"] {
+        input[type="url"]{
             display: block;
+            width: 100%;
+            box-sizing: border-box;
             margin-top: .5rem;
+            padding: .8rem .9rem;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font: inherit;
         }
-        button {
+        button{
             padding: .8rem 1rem;
             border: 0;
             border-radius: 8px;
@@ -184,25 +207,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-weight: 600;
             cursor: pointer;
         }
-        button:hover {
+        button:hover{
             opacity: .95;
         }
-        .ok, .err {
+        .ok, .err{
             margin: 1rem 0;
             padding: .85rem 1rem;
             border-radius: 8px;
         }
-        .ok {
+        .ok{
             background: #eaf8ee;
             color: #185c2b;
             border: 1px solid #b9e2c5;
         }
-        .err {
+        .err{
             background: #fff0f0;
             color: #8a1f1f;
             border: 1px solid #efc2c2;
         }
-        pre {
+        pre{
             overflow: auto;
             background: #111;
             color: #f3f3f3;
@@ -210,11 +233,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             border-radius: 8px;
             font-size: .9rem;
         }
-        .note {
+        .note{
             color: #555;
             font-size: .95rem;
         }
-        code {
+        code{
             background: #f1f1f1;
             padding: .15rem .35rem;
             border-radius: 4px;
@@ -226,7 +249,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <h1>Update Facebook Page profile picture</h1>
 
     <p class="note">
-        This uploads a local image and then tells the Facebook Graph API to use it as the Page avatar.
+        Paste a direct image URL that Facebook/Meta can fetch, then press the button.
     </p>
 
     <?php if ($status !== null): ?>
@@ -237,10 +260,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="err"><?= h($error) ?></div>
     <?php endif; ?>
 
-    <form method="post" enctype="multipart/form-data">
+    <form method="post">
         <div class="row">
-            <label for="avatar"><strong>Select image</strong></label>
-            <input type="file" name="avatar" id="avatar" accept="image/*" required>
+            <label for="picture_url"><strong>Image URL</strong></label>
+            <input
+                    type="url"
+                    name="picture_url"
+                    id="picture_url"
+                    placeholder="https://example.com/path/to/avatar.jpg"
+                    value="<?= h($pictureUrl) ?>"
+                    required
+            >
         </div>
 
         <div class="row">
@@ -248,14 +278,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </form>
 
-    <?php if (!empty($debug)): ?>
-        <h2>API responses</h2>
-        <pre><?= h(json_encode($debug, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)) ?></pre>
+    <?php if ($cfg !== null): ?>
+        <p class="note">
+            Loaded config from <code><?= h($cfg['config_path']) ?></code>
+        </p>
     <?php endif; ?>
 
-    <p class="note">
-        Recommended next step: move <code>PAGE_ID</code> and <code>PAGE_ACCESS_TOKEN</code> into environment variables and protect this page behind your own login.
-    </p>
+    <?php if (!empty($debug)): ?>
+        <h2>API response</h2>
+        <pre><?= h(json_encode($debug, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)) ?></pre>
+    <?php endif; ?>
 </div>
 </body>
 </html>
