@@ -317,7 +317,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="Detect black-bordered comic frames and export each one as a 1080x1350 Instagram image."
     )
     p.add_argument("source", help="Image URL or local file path")
-    p.add_argument("--outdir", type=Path, default=Path("instagram"), help="Directory to write exported PNGs")
+    p.add_argument("--outdir", type=Path, default=Path("dist/ur"), help="Directory to write exported PNGs")
     p.add_argument("--width", type=int, default=1080, help="Output canvas width")
     p.add_argument("--height", type=int, default=1350, help="Output canvas height")
     p.add_argument("--padding-frac", type=float, default=0.06, help="Outer white margin as a fraction of canvas size")
