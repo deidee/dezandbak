@@ -15,27 +15,29 @@
         :root {
             --grid: 24px;
 
-            /* type */
             --font-size: 16px;
-            --line: var(--grid);
+            --line: 24px;
 
-            /* spacing */
-            --space-1: var(--grid);        /* 24 */
-            --space-2: calc(var(--grid) * 2); /* 48 */
-            --space-3: calc(var(--grid) * 3); /* 72 */
-
-            /* controls */
-            --input-height: calc(var(--grid) * 2); /* 48 */
             --border: 1px;
             --radius: 0;
+
+            /* shorter controls inside the grid rhythm */
+            --control-height: 36px;
+            --control-gap: 6px;
+
+            --pad-x: 12px;
+
+            --space-1: 24px;
+            --space-2: 48px;
+            --space-3: 72px;
         }
 
-        /* Optional: visual baseline grid for debugging */
+        /* Debug baseline overlay */
         .form-debug-grid {
             background-image: linear-gradient(
                     to bottom,
-                    rgba(0, 0, 0, 0.08) 0,
-                    rgba(0, 0, 0, 0.08) 1px,
+                    rgba(0, 0, 0, 0.12) 0,
+                    rgba(0, 0, 0, 0.12) 1px,
                     transparent 1px,
                     transparent var(--grid)
             );
@@ -45,7 +47,7 @@
         .form-grid {
             font-size: var(--font-size);
             line-height: var(--line);
-            max-width: 36rem;
+            max-width: 40rem;
         }
 
         .form-grid,
@@ -53,94 +55,153 @@
             box-sizing: border-box;
         }
 
-        .form-row {
+        .form-grid fieldset {
             margin: 0 0 var(--space-1);
-        }
-
-        .form-grid label,
-        .form-grid legend {
-            display: block;
-            font: inherit;
-            line-height: var(--line);
-            margin: 0;
-        }
-
-        .form-grid input,
-        .form-grid select,
-        .form-grid textarea,
-        .form-grid button {
-            display: block;
-            width: 100%;
-            margin: 0;
-            font: inherit;
             border: var(--border) solid currentColor;
-            border-radius: var(--radius);
-            background: transparent;
-            color: inherit;
+            padding: calc(var(--space-1) - var(--border)) var(--pad-x)
+            calc(var(--space-1) - var(--border));
         }
 
-        /* Single-line controls: 48px tall = 2 baselines */
-        .form-grid input,
-        .form-grid select,
-        .form-grid button {
-            height: var(--input-height);
-            line-height: calc(var(--input-height) - (var(--border) * 2));
-            padding: 0 12px;
-        }
-
-        /* Textareas align to the grid by using line-height + padded top/bottom */
-        .form-grid textarea {
-            min-height: calc(var(--grid) * 6); /* 144 */
-            line-height: var(--line);
-            padding: calc((var(--grid) - var(--font-size)) / 2 - var(--border)) 12px;
-            resize: vertical;
-        }
-
-        /* Help and error text stay on the grid too */
+        .form-grid legend,
+        .form-grid label,
         .form-grid .help,
         .form-grid .error {
-            font-size: 14px;
-            line-height: var(--line);
+            display: block;
             margin: 0;
-        }
-
-        .form-grid .error {
-            color: #b00020;
-        }
-
-        /* Groups */
-        .form-grid fieldset {
-            border: var(--border) solid currentColor;
-            margin: 0 0 var(--space-1);
-            padding: var(--space-1) 12px calc(var(--space-1) - var(--border));
+            font: inherit;
+            line-height: var(--line);
         }
 
         .form-grid legend {
             padding: 0 6px;
         }
 
+        .form-row {
+            margin: 0 0 var(--space-1);
+        }
+
+        /* Keeps the whole field on the 24px rhythm */
+        .form-row > .control {
+            padding-top: var(--control-gap);
+            padding-bottom: var(--control-gap);
+        }
+
+        .form-grid input,
+        .form-grid textarea,
+        .form-grid select,
+        .form-grid button {
+            font: inherit;
+            color: inherit;
+        }
+
+        /* Text-like controls */
+        .form-grid input:not([type="checkbox"]):not([type="radio"]),
+        .form-grid select:not([multiple]),
+        .form-grid button {
+            display: block;
+            width: 100%;
+            height: var(--control-height);
+            margin: 0;
+            padding: 0 var(--pad-x);
+            line-height: calc(var(--control-height) - (var(--border) * 2));
+            border: var(--border) solid currentColor;
+            border-radius: var(--radius);
+            background: transparent;
+        }
+
+        /* Single select often needs a tiny bit of right padding */
+        .form-grid select:not([multiple]) {
+            padding-right: calc(var(--pad-x) * 2);
+        }
+
+        /* Textarea sits on the baseline grid internally */
+        .form-grid textarea {
+            display: block;
+            width: 100%;
+            margin: 0;
+            min-height: calc(var(--grid) * 4 - (var(--control-gap) * 2)); /* 84px */
+            padding:
+                    calc((var(--grid) - var(--font-size)) / 2 - var(--border))
+                    var(--pad-x);
+            line-height: var(--line);
+            border: var(--border) solid currentColor;
+            border-radius: var(--radius);
+            background: transparent;
+            resize: vertical;
+        }
+
+        /* Multi-select should expose several 24px rows */
+        .form-grid select[multiple] {
+            display: block;
+            width: 100%;
+            margin: 0;
+            min-height: calc(var(--grid) * 5 - (var(--control-gap) * 2)); /* 108px */
+            padding: 0;
+            line-height: var(--line);
+            border: var(--border) solid currentColor;
+            border-radius: var(--radius);
+            background: transparent;
+        }
+
+        .form-grid select[multiple] option {
+            line-height: var(--line);
+            min-height: var(--line);
+            padding: 0 var(--pad-x);
+        }
+
         /* Checkbox / radio rows */
-        .form-grid .check {
+        .form-check {
             display: flex;
             align-items: flex-start;
             gap: 12px;
             min-height: var(--grid);
+            margin: 0 0 var(--space-1);
         }
 
-        .form-grid .check input[type="checkbox"],
-        .form-grid .check input[type="radio"] {
+        .form-check .control {
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+
+        .form-check input[type="checkbox"],
+        .form-check input[type="radio"] {
             width: var(--grid);
             height: var(--grid);
             margin: 0;
             flex: 0 0 var(--grid);
+            accent-color: currentColor;
         }
 
-        .form-grid .check label {
+        .form-check label {
             flex: 1;
             margin: 0;
         }
 
-        /* Button row */
+        /* Optional stacked checkbox/radio groups */
+        .form-choice-group {
+            margin: 0 0 var(--space-1);
+        }
+
+        .form-choice-group > .group-label {
+            margin: 0;
+        }
+
+        .form-choice-group > .choices {
+            padding-top: var(--control-gap);
+            padding-bottom: var(--control-gap);
+        }
+
+        /* Help and errors stay on the grid */
+        .form-grid .help,
+        .form-grid .error {
+            font-size: 14px;
+            line-height: var(--line);
+        }
+
+        .form-grid .error {
+            color: #b00020;
+        }
+
         .form-grid .actions {
             margin-top: var(--space-2);
         }
@@ -155,24 +216,61 @@
 <form class="form-grid form-debug-grid">
     <div class="form-row">
         <label for="name">Name</label>
-        <input id="name" name="name" type="text">
+        <div class="control">
+            <input id="name" name="name" type="text">
+        </div>
     </div>
 
     <div class="form-row">
-        <label for="email">Email</label>
-        <input id="email" name="email" type="email">
-        <p class="help">We will never share your email.</p>
+        <label for="country">Country</label>
+        <div class="control">
+            <select id="country" name="country">
+                <option>Netherlands</option>
+                <option>Belgium</option>
+                <option>Germany</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="form-row">
+        <label for="tags">Tags</label>
+        <div class="control">
+            <select id="tags" name="tags[]" multiple>
+                <option>Art</option>
+                <option>Design</option>
+                <option>Code</option>
+                <option>Poetry</option>
+                <option>Music</option>
+            </select>
+        </div>
     </div>
 
     <div class="form-row">
         <label for="message">Message</label>
-        <textarea id="message" name="message"></textarea>
+        <div class="control">
+            <textarea id="message" name="message"></textarea>
+        </div>
     </div>
 
-    <div class="form-row check">
+    <div class="form-check">
         <input id="terms" name="terms" type="checkbox">
-        <label for="terms">I agree to the terms.</label>
+        <label for="terms">I agree to the terms</label>
     </div>
+
+    <fieldset class="form-choice-group">
+        <legend class="group-label">Preferred contact</legend>
+        <div class="choices">
+            <div class="form-check">
+                <input id="contact-email" name="contact" type="radio" value="email">
+                <label for="contact-email">Email</label>
+            </div>
+
+            <div class="form-check">
+                <input id="contact-phone" name="contact" type="radio" value="phone">
+                <label for="contact-phone">Phone</label>
+            </div>
+        </div>
+    </fieldset>
 
     <div class="actions">
         <button type="submit">Send</button>
