@@ -122,7 +122,7 @@ def sanitize_domain_from_url(url: str) -> str:
 
 
 def read_domains_txt(script_path: Path) -> List[str]:
-    domains_path = script_path.parent / "domains.txt"
+    domains_path = script_path.parent / "urls.txt"
     if not domains_path.exists():
         raise SystemExit(f"No URL provided and '{domains_path}' not found.")
     lines = domains_path.read_text(encoding="utf-8").splitlines()
