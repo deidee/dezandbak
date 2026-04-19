@@ -3,17 +3,15 @@
 """
 mockup-from-url.py
 
-Changes in this version:
-- Tablet-only extra 2000ms settle delay after viewport resize (before scrolling & screenshotting),
-  to reduce “weird responsive layout” captures.
+Adds:
+1) Skips outputs that already exist (default behavior).
+2) --force flag overwrites existing outputs.
+3) Console output clearly states: created / skipped / overwritten.
 
-Paths:
-- dist/mockup-{domain}.svg
-- dist/screens/{device}-{domain}-{scroll}.png
-- dist/instagram/{domain}-mockup.png
-- dist/instagram/{domain}-full.png
-- dist/instagram/{domain}-{scroll}.png
-- dist/instagram/{domain}-icon.png (if apple-touch-icon found)
+Notes:
+- We treat each output file independently. If only some outputs exist, only those are skipped.
+- When a file is skipped, we also skip the expensive work required solely for that file when possible.
+- Some files depend on others (e.g., mockup PNG depends on SVG), so we still generate dependencies if needed.
 
 Install:
   pip install playwright pillow
@@ -33,6 +31,10 @@ from urllib.parse import urlparse, urljoin
 
 from PIL import Image
 
+
+# ---------------------------------------------------------------------
+# SVG template (cleaned + with SCREEN_* ids)
+# ---------------------------------------------------------------------
 
 DEFAULT_TEMPLATE_SVG = """\
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2520 1530">
@@ -90,6 +92,32 @@ FALLBACK_SCALE_HINTS = {"desktop": 3.2252, "tablet": 3.2252, "mobile": 3.99062}
 
 SCROLL_PRESETS: Dict[str, float] = {"top": 0.0, "mid": 0.5, "middle": 0.5, "bottom": 1.0}
 
+
+# ---------------------------------------------------------------------
+# Output status helpers
+# ---------------------------------------------------------------------
+
+def status_for_target(path: Path, force: bool) -> str:
+    """
+    Returns one of: 'create', 'overwrite', 'skip'
+    """
+    if path.exists():
+        return "overwrite" if force else "skip"
+    return "create"
+
+
+def print_status(action: str, path: Path) -> None:
+    tag = {
+        "create": "[created]   ",
+        "overwrite": "[overwritten]",
+        "skip": "[skipped]   ",
+    }.get(action, "[info]      ")
+    print(f"  {tag} {path.as_posix()}")
+
+
+# ---------------------------------------------------------------------
+# General helpers
+# ---------------------------------------------------------------------
 
 def pretty_xml(xml_bytes: bytes) -> str:
     try:
@@ -200,25 +228,28 @@ def get_apple_touch_icon_url(page, base_url: str) -> Optional[str]:
     return None
 
 
+# ---------------------------------------------------------------------
+# Screenshot functions (fresh page per device; oldschool timeouts)
+# ---------------------------------------------------------------------
+
 def take_screenshots(
     url: str,
+    domain: str,
     screens_dir: Path,
     instagram_dir: Path,
-    domain: str,
     scrolls_3: List[str],
     instagram_scroll: str,
-    load_wait_ms: int = 2500,
-    scroll_wait_ms: int = 1200,
-) -> Tuple[List[Path], Path, Optional[str], Optional[str]]:
+    load_wait_ms: int,
+    scroll_wait_ms: int,
+    force: bool,
+    want_device_paths: List[Path],
+    want_instagram_viewport_path: Path,
+) -> Tuple[List[Path], Optional[str], Optional[str]]:
     """
-    Creates:
-      dist/screens/desktop-{domain}-{scroll}.png
-      dist/screens/tablet-{domain}-{scroll}.png
-      dist/screens/mobile-{domain}-{scroll}.png
-      dist/instagram/{domain}-{scroll}.png   (1080×1080 viewport)
+    Captures device screenshots + instagram viewport screenshot, skipping existing unless --force.
 
     Returns:
-      (device_paths[3], insta_1080_path, theme_color, apple_icon_url)
+      (device_paths[3], theme_color, apple_icon_url)
     """
     from playwright.sync_api import sync_playwright  # type: ignore
 
@@ -232,29 +263,27 @@ def take_screenshots(
     theme_color: Optional[str] = None
     apple_icon_url: Optional[str] = None
 
-    def grab(kind: str, vp_w: int, vp_h: int, scroll_name: str, out_path: Path) -> None:
+    def grab(vp_w: int, vp_h: int, scroll_name: str, out_path: Path, kind: str) -> None:
         nonlocal theme_color, apple_icon_url
+
+        action = status_for_target(out_path, force)
+        if action == "skip":
+            print_status("skip", out_path)
+            return
 
         with sync_playwright() as p:
             browser = p.chromium.launch()
-
-            # A fresh context per device avoids “resize state” issues.
-            ctx = browser.new_context(
-                viewport={"width": vp_w, "height": vp_h},
-                device_scale_factor=2,
-            )
+            ctx = browser.new_context(viewport={"width": vp_w, "height": vp_h}, device_scale_factor=2)
             page = ctx.new_page()
 
             page.goto(url, wait_until="domcontentloaded", timeout=60_000)
             page.wait_for_timeout(load_wait_ms)
 
-            # Only need to read these once; first successful capture wins.
             if theme_color is None:
                 theme_color = get_theme_color(page)
             if apple_icon_url is None:
                 apple_icon_url = get_apple_touch_icon_url(page, url)
 
-            # Recompute per-viewport (important!)
             scroll_height = page.evaluate(
                 "() => Math.max(document.body.scrollHeight, document.documentElement.scrollHeight)"
             )
@@ -269,26 +298,31 @@ def take_screenshots(
             ctx.close()
             browser.close()
 
-    device_paths: List[Path] = []
-    # Desktop / Tablet / Mobile device screenshots
-    for kind, (_sid, _x, _y, w, h), scroll_name in zip(kinds, SCREENS, scrolls_3):
+        print_status("overwrite" if action == "overwrite" else "create", out_path)
+
+    # Device screenshots
+    for kind, (_sid, _x, _y, w, h), scroll_name, out_path in zip(
+        kinds, SCREENS, scrolls_3, want_device_paths
+    ):
         vp_w, vp_h = choose_viewport(kind, w, h)
-        out_path = screens_dir / f"{kind}-{domain}-{scroll_name}.png"
-        grab(kind, vp_w, vp_h, scroll_name, out_path)
-        device_paths.append(out_path)
+        grab(vp_w, vp_h, scroll_name, out_path, kind)
 
-    # Instagram 1080×1080 viewport screenshot goes in dist/instagram/
-    insta_path = instagram_dir / f"{domain}-{instagram_scroll}.png"
-    grab("instagram", 1080, 1080, instagram_scroll, insta_path)
+    # Instagram viewport screenshot
+    grab(1080, 1080, instagram_scroll, want_instagram_viewport_path, "instagram")
 
-    return device_paths, insta_path, theme_color, apple_icon_url
+    return want_device_paths, theme_color, apple_icon_url
 
 
 def take_fullpage_screenshot(
     url: str,
     tmp_path: Path,
-    load_wait_ms: int = 2500,
-) -> Tuple[Path, Optional[str], Optional[str]]:
+    load_wait_ms: int,
+    force: bool,
+) -> Tuple[Optional[str], Optional[str]]:
+    """
+    Always *creates/overwrites* tmp_path because it’s a temp artifact for downstream generation.
+    Returns (theme_color, apple_icon_url)
+    """
     from playwright.sync_api import sync_playwright  # type: ignore
 
     tmp_path.parent.mkdir(parents=True, exist_ok=True)
@@ -305,13 +339,26 @@ def take_fullpage_screenshot(
         theme_color = get_theme_color(page)
         apple_icon_url = get_apple_touch_icon_url(page, url)
 
+        # Try to help long screenshots paint images before capture
+        page.evaluate("""() => {
+          document.querySelectorAll('img[decoding="async"]').forEach(img => img.decoding = "sync");
+        }""")
+        page.evaluate("""() => Promise.allSettled(
+          Array.from(document.images).map(img => img.decode ? img.decode().catch(()=>{}) : Promise.resolve())
+        )""")
+        page.wait_for_timeout(2000)
+
         page.screenshot(path=str(tmp_path), full_page=True)
 
         ctx.close()
         browser.close()
 
-    return tmp_path, theme_color, apple_icon_url
+    return theme_color, apple_icon_url
 
+
+# ---------------------------------------------------------------------
+# SVG + composite renderers
+# ---------------------------------------------------------------------
 
 def embed_into_svg(template_svg: str, out_svg: Path, images: List[Path], theme_color: Optional[str]) -> None:
     try:
@@ -629,39 +676,9 @@ def download_bytes_via_playwright(url: str, timeout_ms: int = 20_000) -> Optiona
     return None
 
 
-def take_fullpage_screenshot(url: str, tmp_path: Path, load_wait_ms: int = 2500) -> Tuple[Path, Optional[str], Optional[str]]:
-    from playwright.sync_api import sync_playwright  # type: ignore
-
-    tmp_path.parent.mkdir(parents=True, exist_ok=True)
-
-    with sync_playwright() as p:
-        browser = p.chromium.launch()
-        ctx = browser.new_context(device_scale_factor=2)
-        page = ctx.new_page()
-
-        page.set_viewport_size({"width": 1200, "height": 800})
-        page.goto(url, wait_until="domcontentloaded", timeout=60_000)
-        page.wait_for_timeout(load_wait_ms)
-
-        theme_color = get_theme_color(page)
-        apple_icon_url = get_apple_touch_icon_url(page, url)
-
-        page.evaluate("""() => {
-          document.querySelectorAll('img[decoding="async"]').forEach(img => img.decoding = "sync");
-        }""")
-
-        page.evaluate("""() => Promise.allSettled(
-          Array.from(document.images).map(img => img.decode ? img.decode().catch(()=>{}) : Promise.resolve())
-        )""")
-        page.wait_for_timeout(2000)
-
-        page.screenshot(path=str(tmp_path), full_page=True)
-
-        ctx.close()
-        browser.close()
-
-    return tmp_path, theme_color, apple_icon_url
-
+# ---------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------
 
 def main() -> None:
     ap = argparse.ArgumentParser()
@@ -672,6 +689,7 @@ def main() -> None:
     ap.add_argument("--instagram-scroll", default="top")
     ap.add_argument("--load-wait-ms", type=int, default=2500)
     ap.add_argument("--scroll-wait-ms", type=int, default=1200)
+    ap.add_argument("--force", action="store_true", help="Overwrite existing outputs")
     args = ap.parse_args()
 
     out_dir = Path(args.out)
@@ -696,50 +714,101 @@ def main() -> None:
             out_insta_full = instagram_dir / f"{domain}-full.png"
             out_insta_icon = instagram_dir / f"{domain}-icon.png"
 
-            device_shots, insta_viewport_path, theme_color, icon_url1 = take_screenshots(
+            # Desired screenshot outputs (device + instagram viewport)
+            desired_device_paths = [
+                screens_dir / f"desktop-{domain}-{args.scrolls[0]}.png",
+                screens_dir / f"tablet-{domain}-{args.scrolls[1]}.png",
+                screens_dir / f"mobile-{domain}-{args.scrolls[2]}.png",
+            ]
+            desired_insta_viewport = instagram_dir / f"{domain}-{args.instagram_scroll}.png"
+
+            print(f"\n== {domain} ==")
+            print(f"URL: {url}")
+
+            # 1) Screenshots (each file can be created/overwritten/skipped)
+            device_shots, theme_color, icon_url1 = take_screenshots(
                 url=url,
+                domain=domain,
                 screens_dir=screens_dir,
                 instagram_dir=instagram_dir,
-                domain=domain,
                 scrolls_3=args.scrolls,
                 instagram_scroll=args.instagram_scroll,
                 load_wait_ms=args.load_wait_ms,
                 scroll_wait_ms=args.scroll_wait_ms,
+                force=args.force,
+                want_device_paths=desired_device_paths,
+                want_instagram_viewport_path=desired_insta_viewport,
             )
 
-            embed_into_svg(template_svg, out_svg, device_shots, theme_color)
-            render_instagram_composite(out_svg, out_insta_mockup, theme_color)
+            # 2) SVG mockup depends on device screenshots. If any device screenshot is missing, we cannot build SVG.
+            svg_action = status_for_target(out_svg, args.force)
+            can_build_svg = all(p.exists() for p in device_shots)
+            if not can_build_svg:
+                print(f"  [skipped]    {out_svg.as_posix()} (missing device screenshots)")
+            else:
+                if svg_action == "skip":
+                    print_status("skip", out_svg)
+                else:
+                    embed_into_svg(template_svg, out_svg, device_shots, theme_color)
+                    print_status("overwrite" if svg_action == "overwrite" else "create", out_svg)
 
-            tmp_full = screens_dir / f"_fullpage-{domain}.png"
-            full_path, theme2, icon_url2 = take_fullpage_screenshot(url, tmp_full, load_wait_ms=args.load_wait_ms)
+            # 3) Instagram mockup PNG depends on SVG
+            mockup_action = status_for_target(out_insta_mockup, args.force)
+            if not out_svg.exists():
+                print(f"  [skipped]    {out_insta_mockup.as_posix()} (missing SVG)")
+            else:
+                if mockup_action == "skip":
+                    print_status("skip", out_insta_mockup)
+                else:
+                    render_instagram_composite(out_svg, out_insta_mockup, theme_color)
+                    print_status("overwrite" if mockup_action == "overwrite" else "create", out_insta_mockup)
 
-            bg = theme_color or theme2 or "#e6e6e6"
-            render_instagram_fullpage_square(full_path, out_insta_full, bg, margin_px=128)
+            # 4) Instagram full PNG (1080 square of full-page screenshot)
+            full_action = status_for_target(out_insta_full, args.force)
+            if full_action == "skip":
+                print_status("skip", out_insta_full)
+                theme2 = None
+                icon_url2 = None
+            else:
+                tmp_full = screens_dir / f"_fullpage-{domain}.png"
+                theme2, icon_url2 = take_fullpage_screenshot(url, tmp_full, args.load_wait_ms, args.force)
+                bg = theme_color or theme2 or "#e6e6e6"
+                render_instagram_fullpage_square(tmp_full, out_insta_full, bg, margin_px=128)
+                print_status("overwrite" if full_action == "overwrite" else "create", out_insta_full)
+                try:
+                    tmp_full.unlink()
+                except Exception:
+                    pass
 
-            icon_url = icon_url1 or icon_url2
-            if icon_url:
-                data = download_bytes_via_playwright(icon_url)
-                if data:
-                    render_instagram_icon_square(data, out_insta_icon, bg)
+            # 5) Icon PNG
+            icon_action = status_for_target(out_insta_icon, args.force)
+            if icon_action == "skip":
+                print_status("skip", out_insta_icon)
+            else:
+                # We can source icon URL from earlier screenshot pass; if missing, try from fullpage pass.
+                icon_url = icon_url1
+                if icon_url is None:
+                    # only available if we generated fullpage; if full was skipped, icon_url2 is None
+                    try:
+                        icon_url = icon_url2  # type: ignore[name-defined]
+                    except Exception:
+                        icon_url = None
 
-            try:
-                tmp_full.unlink()
-            except Exception:
-                pass
+                bg = theme_color or (theme2 if "theme2" in locals() else None) or "#e6e6e6"
 
-            print(f"\n== {domain} ==")
-            print(f"URL: {url}")
-            print(f"Theme color: {theme_color or theme2 or '(none found)'}")
-            print("Outputs:")
-            print(f"  - {out_svg}")
-            print(f"  - {out_insta_mockup}")
-            print(f"  - {out_insta_full}")
-            print(f"  - {insta_viewport_path}")
-            if icon_url and out_insta_icon.exists():
-                print(f"  - {out_insta_icon}")
-            print("Screens:")
-            for p in device_shots:
-                print(f"  - {p}")
+                if not icon_url:
+                    print(f"  [skipped]    {out_insta_icon.as_posix()} (no apple-touch-icon found)")
+                else:
+                    data = download_bytes_via_playwright(icon_url)
+                    if not data:
+                        print(f"  [skipped]    {out_insta_icon.as_posix()} (icon download failed)")
+                    else:
+                        render_instagram_icon_square(data, out_insta_icon, bg)
+                        print_status("overwrite" if icon_action == "overwrite" else "create", out_insta_icon)
+
+            # Summary line
+            tc = theme_color or (theme2 if "theme2" in locals() and theme2 else None) or "(none found)"
+            print(f"  [info]       theme-color: {tc}")
 
         except Exception as e:
             print(f"\n!! Failed for '{item}': {e}")
